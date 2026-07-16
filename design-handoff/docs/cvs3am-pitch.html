@@ -1,0 +1,661 @@
+<meta charset="utf-8">
+<title>새벽 3시의 편의점 — 게임 기획 피치</title>
+<meta name="color-scheme" content="dark">
+<style>
+  :root{
+    --ink:#0A0E17;          /* 심야 아스팔트 */
+    --panel:#121A2B;
+    --panel-2:#0E1522;
+    --line:#22304A;
+    --fluor:#7FE3F0;        /* 편의점 형광등 */
+    --fluor-dim:#3E6E7A;
+    --danger:#FF5A5A;       /* 괴담 레드 */
+    --amber:#FFC24B;        /* 삼각김밥 앰버 */
+    --paper:#F2EDDF;        /* 영수증 종이 */
+    --paper-ink:#2A2620;
+    --text:#D7E3EC;
+    --muted:#8CA0B3;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    --sans:"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;
+  }
+  html{color-scheme:dark}
+  body{
+    background:var(--ink);
+    color:var(--text);
+    font-family:var(--sans);
+    line-height:1.75;
+    margin:0;
+    font-size:16.5px;
+    background-image:radial-gradient(1200px 500px at 50% -100px, #16233B 0%, transparent 70%);
+  }
+  .wrap{max-width:860px;margin:0 auto;padding:0 24px 120px}
+
+  /* ---------- HERO ---------- */
+  header{padding:88px 0 56px;text-align:center}
+  .clock{
+    font-family:var(--mono);
+    font-size:clamp(56px,10vw,92px);
+    font-weight:700;
+    color:var(--danger);
+    letter-spacing:.06em;
+    text-shadow:0 0 24px rgba(255,90,90,.45), 0 0 60px rgba(255,90,90,.18);
+    line-height:1;
+  }
+  .clock .colon{animation:blink 1.4s steps(1) infinite}
+  @keyframes blink{50%{opacity:.15}}
+  @media (prefers-reduced-motion:reduce){.clock .colon{animation:none}}
+  h1{
+    font-size:clamp(34px,6vw,54px);
+    font-weight:900;
+    letter-spacing:-.02em;
+    margin:18px 0 10px;
+    text-wrap:balance;
+    color:#F2F8FB;
+  }
+  .logline{
+    font-size:19px;color:var(--fluor);font-weight:600;margin:0 0 26px;text-wrap:balance;
+  }
+  .tags{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .tag{
+    font-family:var(--mono);font-size:12px;letter-spacing:.08em;
+    border:1px solid var(--line);border-radius:3px;
+    padding:5px 11px;color:var(--muted);background:var(--panel-2);
+  }
+  .tag.hot{color:var(--amber);border-color:#4a3c1c}
+
+  /* ---------- SECTIONS ---------- */
+  section{margin-top:84px}
+  .aisle{
+    display:flex;align-items:baseline;gap:14px;margin-bottom:22px;
+    border-bottom:1px solid var(--line);padding-bottom:14px;
+  }
+  .aisle .no{
+    font-family:var(--mono);font-size:13px;color:var(--ink);
+    background:var(--fluor);padding:3px 9px;border-radius:2px;font-weight:700;
+    letter-spacing:.05em;flex:none;transform:translateY(-2px);
+  }
+  .aisle h2{font-size:26px;font-weight:800;margin:0;letter-spacing:-.01em}
+  .aisle .sub{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto;letter-spacing:.06em}
+  h3{font-size:18px;font-weight:800;margin:34px 0 10px;color:#EAF3F8}
+  p{margin:0 0 16px;max-width:66ch}
+  strong{color:#F2F8FB}
+  .lead{font-size:18px;color:#E4EEF5}
+  em{color:var(--fluor);font-style:normal;font-weight:600}
+  ul{margin:0 0 16px;padding-left:22px}
+  li{margin-bottom:8px;max-width:62ch}
+  li::marker{color:var(--fluor-dim)}
+
+  /* ---------- RECEIPT COMMENT ---------- */
+  .receipt{
+    background:var(--paper);color:var(--paper-ink);
+    font-family:var(--mono);font-size:13.5px;line-height:1.65;
+    max-width:400px;padding:18px 20px 14px;
+    margin:40px auto;
+    box-shadow:0 10px 30px rgba(0,0,0,.5);
+    position:relative;
+    --tilt:-1.2deg;
+    transform:rotate(var(--tilt));
+  }
+  .receipt.r2{--tilt:1.4deg}
+  .receipt.r3{--tilt:-0.8deg}
+  .receipt::before,.receipt::after{
+    content:"";position:absolute;left:0;right:0;height:8px;
+    background-image:linear-gradient(45deg,var(--paper) 25%,transparent 25%),linear-gradient(-45deg,var(--paper) 25%,transparent 25%);
+    background-size:12px 12px;background-repeat:repeat-x;
+  }
+  .receipt::before{top:-7px;background-position:bottom}
+  .receipt::after{bottom:-7px;transform:scaleY(-1);background-position:bottom}
+  .receipt .rhead{
+    text-align:center;border-bottom:1px dashed #9a917e;padding-bottom:8px;margin-bottom:10px;
+    font-weight:700;letter-spacing:.14em;font-size:12px;
+  }
+  .receipt .rbody{white-space:pre-line}
+  .receipt .barcode{
+    height:34px;margin-top:12px;
+    background:repeating-linear-gradient(90deg,#2A2620 0 2px,transparent 2px 4px,#2A2620 4px 7px,transparent 7px 9px,#2A2620 9px 10px,transparent 10px 14px);
+  }
+  .receipt .rfoot{font-size:11px;text-align:center;margin-top:6px;letter-spacing:.1em;color:#6d65550}
+  .receipt .rfoot{color:#6d6555}
+
+  /* ---------- SKETCH FRAME ---------- */
+  .sketch{
+    background:var(--panel-2);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:22px 18px 12px;
+    margin:26px 0;
+    overflow-x:auto;
+  }
+  .sketch svg{display:block;margin:0 auto;max-width:100%;height:auto}
+  .cap{
+    font-family:var(--mono);font-size:12px;color:var(--muted);
+    text-align:center;margin-top:12px;letter-spacing:.05em;
+  }
+  .cap b{color:var(--fluor);font-weight:700}
+
+  /* ---------- TABLES ---------- */
+  .tbl-wrap{overflow-x:auto;margin:20px 0;border:1px solid var(--line);border-radius:6px}
+  table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:620px}
+  th{
+    font-family:var(--mono);font-size:11.5px;letter-spacing:.09em;text-align:left;
+    color:var(--muted);background:var(--panel);
+    padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap;
+  }
+  td{padding:11px 14px;border-bottom:1px solid #1a2438;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.k{color:#F2F8FB;font-weight:700;white-space:nowrap}
+  td.evo{color:var(--amber);font-weight:700;white-space:nowrap}
+  .num{font-variant-numeric:tabular-nums;font-family:var(--mono);font-size:13.5px}
+
+  /* ---------- CALLOUT ---------- */
+  .neon-box{
+    border:1px solid #2a5560;border-left:3px solid var(--fluor);
+    background:linear-gradient(180deg,#10202A 0%, var(--panel-2) 100%);
+    border-radius:0 6px 6px 0;
+    padding:20px 24px;margin:26px 0;
+  }
+  .neon-box .bt{
+    font-family:var(--mono);font-size:12px;color:var(--fluor);
+    letter-spacing:.12em;margin-bottom:8px;font-weight:700;
+  }
+  .danger-box{border-color:#5c2a2a;border-left-color:var(--danger)}
+  .danger-box .bt{color:var(--danger)}
+
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+  .card{
+    background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px 20px;
+  }
+  .card h4{margin:0 0 6px;font-size:15.5px;color:#F2F8FB}
+  .card p{font-size:14px;color:var(--muted);margin:0}
+  .card .mono{font-family:var(--mono);font-size:11.5px;color:var(--fluor);letter-spacing:.08em;display:block;margin-bottom:8px}
+
+  footer{
+    margin-top:100px;border-top:1px solid var(--line);padding-top:28px;
+    font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;letter-spacing:.06em;
+  }
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="clock">03<span class="colon">:</span>00</div>
+  <h1>새벽 3시의 편의점</h1>
+  <p class="logline">"죽어도, 다시 새벽 3시. 해가 뜰 때까지 살아남아라."</p>
+  <div class="tags">
+    <span class="tag">SURVIVOR-LIKE</span>
+    <span class="tag">K-도시괴담</span>
+    <span class="tag">타임루프</span>
+    <span class="tag">세로모드 · 원핸드</span>
+    <span class="tag hot">한 판 18분</span>
+  </div>
+</header>
+
+<!-- ================================================== -->
+<section>
+  <div class="aisle"><span class="no">01</span><h2>30초 피치 — 왜 이 게임인가</h2><span class="sub">THE PITCH</span></div>
+
+  <p class="lead">뱀서라이크는 지금 <strong>메커니즘은 포화, 테마는 공백</strong>인 시장입니다. 탕탕특공대·Vampire Survivors 이후 수백 개의 아류가 나왔지만, 전부 좀비·판타지·SF의 재탕이에요. 유저는 장르에 지친 게 아니라 <em>배경에</em> 지쳤습니다.</p>
+  <p>《새벽 3시의 편의점》은 그 공백을 정확히 찌릅니다. <strong>누구나 아는 공간(편의점) × 누구나 아는 공포(도시괴담) × 검증된 재미(뱀서라이크)</strong>. 설명이 필요 없는 게임은 광고비가 덜 듭니다 — 스크린샷 한 장이 곧 세계관 설명이니까요.</p>
+  <ul>
+    <li><strong>차별화가 겉치장이 아닙니다.</strong> "괴담은 소문을 먹고 자란다"는 설정이 그대로 리스크·리워드 메커니즘(소문 게이지, §06)이 됩니다.</li>
+    <li><strong>반복 플레이의 서사적 정당화.</strong> 죽음 = 루프 리셋. 로그라이트의 "왜 또 하는가"에 스토리가 답합니다.</li>
+    <li><strong>바이럴 내장.</strong> 빨간 마스크, 4시 44분, 거울 귀신 — 괴담 소재는 숏폼에서 이미 검증된 밈 자산입니다.</li>
+  </ul>
+
+  <div class="receipt">
+    <div class="rhead">기획자 코멘트 · COMMENT #001</div>
+    <div class="rbody">탕탕특공대가 증명한 건 "뱀서라이크가 돈이 된다"가 아니라 "조작을 이동 하나로 줄여도 깊이가 남는다"는 것.
+
+우리는 거기에 '이야기가 있는 공포'를 얹는다. 무기 220종보다 기억에 남는 보스 7종이 더 오래 간다.</div>
+    <div class="barcode"></div>
+    <div class="rfoot">2026-07-09 03:00 * 교환/환불 불가</div>
+  </div>
+</section>
+
+<!-- ================================================== -->
+<section>
+  <div class="aisle"><span class="no">02</span><h2>세계관 &amp; 스토리</h2><span class="sub">WORLD / NARRATIVE</span></div>
+
+  <h3>설정</h3>
+  <p>주인공 <strong>'나'</strong>는 24시 편의점의 심야 알바생. 어느 날 새벽 3시 정각, 세상이 <em>이면(裏面)</em>으로 뒤집힙니다. 거리는 안개에 잠기고, 도시괴담 속 존재들이 편의점 불빛을 향해 몰려듭니다 — 괴담에게 형광등 불빛은 <strong>'목격자가 있다'는 신호</strong>거든요. 괴담은 목격되어야 존재할 수 있으니까.</p>
+  <p>해가 뜨는 <strong>오전 6시까지 살아남으면</strong> 세상은 원래대로 돌아옵니다. 죽으면? <strong>다시 새벽 3시.</strong> 주인공은 이 3시간에 갇혀 있습니다.</p>
+
+  <h3>미스터리 — 파편 서사</h3>
+  <p>루프를 돌 때마다 <em>'기억 조각'</em>(영수증 형태의 수집물)이 하나씩 드랍됩니다. 조각을 모으면 진상이 열립니다:</p>
+  <ul>
+    <li><strong>1막 —</strong> 실종된 전임 점장의 흔적. 그도 3시에 갇혀 있었다.</li>
+    <li><strong>2막 —</strong> 괴담들이 편의점을 습격하는 게 아니라, <em>편의점으로 도망쳐 오고 있다</em>는 정황. 그들을 쫓는 더 큰 무언가 — '새벽 그 자체'.</li>
+    <li><strong>3막(진엔딩) —</strong> 주인공이 루프에 갇힌 이유. 새벽 3시, 이 편의점 앞 횡단보도에서 일어났던 사고의 기억. 주인공은 괴담을 없애는 게 아니라 <strong>괴담이 되어가는 자신을 붙잡고 있었던 것.</strong> 마지막 선택: 아침을 맞을 것인가, 3시에 남을 것인가.</li>
+  </ul>
+  <p>파편 서사는 할로우 나이트·이나리오스식 "찾는 만큼만 보이는 이야기"입니다. 스토리에 관심 없는 유저는 그냥 쏘고 달리면 되고, 파는 유저에게는 커뮤니티 고찰거리가 됩니다. <strong>고찰 콘텐츠는 공짜 마케팅입니다.</strong></p>
+
+  <div class="receipt r2">
+    <div class="rhead">기획자 코멘트 · COMMENT #002</div>
+    <div class="rbody">호러 수위 주의. 우리 타깃은 공포게임 유저가 아니라 탕탕특공대 유저다.
+
+무서운 게임(X)
+오싹한데 귀여운 게임(O)
+
+레퍼런스: 쿠키런의 유령, 스푸키 감성. 빨간 마스크도 어딘가 얼빠진 데가 있어야 한다. '패러디 가능한 공포'가 밈이 된다.</div>
+    <div class="barcode"></div>
+    <div class="rfoot">아트 디렉션 필독 * POS-02</div>
+  </div>
+</section>
+
+<!-- ================================================== -->
+<section>
+  <div class="aisle"><span class="no">03</span><h2>코어 루프 — 한 판의 구조</h2><span class="sub">CORE LOOP</span></div>
+
+  <p>한 판 = 게임 내 <strong>3:00 → 6:00</strong>, 실제 시간 약 <strong>18분</strong>. 게임 내 시계가 곧 웨이브 타이머라서, HUD의 시계만 봐도 긴장이 설계됩니다. <em>"4시 44분이 온다"</em>는 걸 유저가 아는 순간, 타이머는 공포 장치가 됩니다.</p>
+
+  <div class="sketch">
+    <svg viewBox="0 0 780 190" width="780" height="190" role="img" aria-label="한 판 타임라인 스케치: 3시부터 6시까지 이벤트 배치">
+      <!-- baseline -->
+      <line x1="40" y1="120" x2="740" y2="120" stroke="#7FE3F0" stroke-width="2"/>
+      <!-- ticks & labels -->
+      <g font-family="SF Mono,ui-monospace,Menlo,monospace" font-size="13" fill="#8CA0B3" text-anchor="middle">
+        <line x1="40"  y1="112" x2="40"  y2="128" stroke="#7FE3F0" stroke-width="2"/>
+        <text x="40" y="150" fill="#FF5A5A" font-weight="bold">3:00</text>
+        <text x="40" y="168" font-size="11">루프 시작</text>
+        <line x1="157" y1="114" x2="157" y2="126" stroke="#3E6E7A" stroke-width="2"/>
+        <text x="157" y="150">3:33</text>
+        <text x="157" y="168" font-size="11">소문 러시</text>
+        <line x1="273" y1="114" x2="273" y2="126" stroke="#3E6E7A" stroke-width="2"/>
+        <text x="273" y="150">4:00</text>
+        <text x="273" y="168" font-size="11">미니보스</text>
+        <line x1="447" y1="108" x2="447" y2="132" stroke="#FF5A5A" stroke-width="3"/>
+        <text x="447" y="150" fill="#FF5A5A" font-weight="bold">4:44</text>
+        <text x="447" y="168" font-size="11" fill="#FF5A5A">정예 습격</text>
+        <line x1="563" y1="114" x2="563" y2="126" stroke="#3E6E7A" stroke-width="2"/>
+        <text x="563" y="150">5:00</text>
+        <text x="563" y="168" font-size="11">챕터 보스</text>
+        <line x1="680" y1="114" x2="680" y2="126" stroke="#3E6E7A" stroke-width="2"/>
+        <text x="680" y="150">5:55</text>
+        <text x="680" y="168" font-size="11">최종 러시</text>
+        <line x1="740" y1="112" x2="740" y2="128" stroke="#FFC24B" stroke-width="2"/>
+        <text x="740" y="150" fill="#FFC24B" font-weight="bold">6:00</text>
+        <text x="740" y="168" font-size="11" fill="#FFC24B">해 뜸 = 클리어</text>
+      </g>
+      <!-- intensity curve (hand-drawn feel) -->
+      <path d="M40,100 C110,92 140,70 157,66 C185,60 240,80 273,58 C330,22 400,70 447,30 C480,4 530,60 563,26 C610,-10 660,60 700,34 C720,22 735,40 740,52"
+            fill="none" stroke="#FF5A5A" stroke-width="2" stroke-dasharray="5 4" opacity=".85"/>
+      <text x="70" y="40" font-family="SF Mono,ui-monospace,monospace" font-size="11" fill="#FF5A5A" opacity=".9">--- 긴장 곡선(적 밀도)</text>
+      <!-- sunrise -->
+      <circle cx="740" cy="90" r="11" fill="none" stroke="#FFC24B" stroke-width="2"/>
+      <g stroke="#FFC24B" stroke-width="2">
+        <line x1="740" y1="72" x2="740" y2="66"/><line x1="726" y1="78" x2="722" y2="74"/><line x1="754" y1="78" x2="758" y2="74"/>
+      </g>
+    </svg>
+    <div class="cap">SKETCH 01 — 한 판(18분) 타임라인. <b>4:44</b>는 매판 고정 공포 이벤트, 시계가 곧 예고장.</div>
+  </div>
+
+  <h3>분 단위 페이싱</h3>
+  <ul>
+    <li><strong>3:00–3:30 (도입)</strong> — 잡몹 웨이브. 첫 레벨업 3택으로 빌드 방향 결정. 편의점 주변 골목을 벗어나 상가 거리로.</li>
+    <li><strong>3:33 (소문 러시)</strong> — 30초간 물량 3배. 여기서 소문 게이지(§06) 첫 선택지 등장.</li>
+    <li><strong>4:00 (미니보스)</strong> — 챕터별 중간보스. 처치 시 무기 진화 재료 '목격담' 드랍.</li>
+    <li><strong>4:44 (정예 습격)</strong> — 화면이 잠깐 CCTV 노이즈로 지직거린 뒤 정예 몹 난입. 매 판 고정이라 유저가 <em>기다리게 되는</em> 공포.</li>
+    <li><strong>5:00 (챕터 보스)</strong> — 빨간 마스크 등 메인 보스전. 패턴형 전투 3분.</li>
+    <li><strong>5:55–6:00 (최종 러시)</strong> — 하늘이 밝아오며 전 몹 광폭화. 버티면 일출 연출과 함께 클리어. <strong>매 판의 엔딩이 '아침'이라는 카타르시스</strong> — 이 게임의 시그니처 순간입니다.</li>
+  </ul>
+</section>
+
+<!-- ================================================== -->
+<section>
+  <div class="aisle"><span class="no">04</span><h2>화면 스케치</h2><span class="sub">SCREEN MOCKUP</span></div>
+
+  <div class="sketch">
+    <svg viewBox="0 0 760 430" width="760" height="430" role="img" aria-label="게임 화면 목업: 인게임 필드와 레벨업 선택 화면">
+      <!-- ============ LEFT PHONE: field ============ -->
+      <g>
+        <rect x="30" y="14" width="230" height="400" rx="18" fill="#0E1522" stroke="#7FE3F0" stroke-width="2"/>
+        <!-- HUD top -->
+        <rect x="46" y="30" width="198" height="10" rx="5" fill="none" stroke="#3E6E7A" stroke-width="1.5"/>
+        <rect x="46" y="30" width="120" height="10" rx="5" fill="#7FE3F0" opacity=".8"/>
+        <text x="145" y="62" font-family="SF Mono,ui-monospace,monospace" font-size="17" fill="#FF5A5A" text-anchor="middle" font-weight="bold">04:12</text>
+        <text x="52" y="62" font-family="SF Mono,ui-monospace,monospace" font-size="10" fill="#8CA0B3">Lv.12</text>
+        <text x="238" y="62" font-family="SF Mono,ui-monospace,monospace" font-size="10" fill="#FFC24B" text-anchor="end">₩ 1,340</text>
+        <!-- rumor gauge -->
+        <rect x="46" y="72" width="198" height="6" rx="3" fill="none" stroke="#5c2a2a" stroke-width="1"/>
+        <rect x="46" y="72" width="88" height="6" rx="3" fill="#FF5A5A" opacity=".75"/>
+        <text x="46" y="90" font-family="SF Mono,ui-monospace,monospace" font-size="9" fill="#FF5A5A">소문 게이지 ▸ 확산 중…</text>
+
+        <!-- player -->
+        <circle cx="145" cy="230" r="10" fill="#7FE3F0"/>
+        <circle cx="145" cy="230" r="34" fill="none" stroke="#7FE3F0" stroke-width="1.5" stroke-dasharray="4 5" opacity=".7"/>
+        <!-- umbrella swing arc -->
+        <path d="M110,205 A46 46 0 0 1 185,212" fill="none" stroke="#FFC24B" stroke-width="3" stroke-linecap="round"/>
+        <text x="196" y="206" font-size="9" font-family="SF Mono,ui-monospace,monospace" fill="#FFC24B">우산 휘두르기</text>
+
+        <!-- enemies converging -->
+        <g fill="#FF5A5A">
+          <circle cx="80" cy="140" r="6"/><circle cx="66" cy="170" r="5"/><circle cx="98" cy="122" r="5"/>
+          <circle cx="205" cy="150" r="6"/><circle cx="222" cy="180" r="5"/><circle cx="196" cy="126" r="4"/>
+          <circle cx="70" cy="300" r="6"/><circle cx="95" cy="325" r="5"/>
+          <circle cx="212" cy="308" r="6"/><circle cx="228" cy="282" r="4"/><circle cx="190" cy="332" r="5"/>
+        </g>
+        <g stroke="#FF5A5A" stroke-width="1" opacity=".5">
+          <line x1="86" y1="146" x2="128" y2="212"/><line x1="200" y1="155" x2="160" y2="212"/>
+          <line x1="78" y1="294" x2="126" y2="246"/><line x1="206" y1="302" x2="162" y2="248"/>
+        </g>
+        <!-- xp gems -->
+        <g fill="#7FE3F0" opacity=".9">
+          <rect x="120" y="285" width="7" height="7" transform="rotate(45 123 288)"/>
+          <rect x="170" y="170" width="7" height="7" transform="rotate(45 173 173)"/>
+        </g>
+        <!-- joystick -->
+        <circle cx="90" cy="372" r="26" fill="none" stroke="#3E6E7A" stroke-width="2"/>
+        <circle cx="98" cy="366" r="12" fill="#3E6E7A" opacity=".8"/>
+        <text x="130" y="376" font-size="9" font-family="SF Mono,ui-monospace,monospace" fill="#8CA0B3">이동만 조작</text>
+      </g>
+
+      <!-- arrow between phones -->
+      <g stroke="#8CA0B3" stroke-width="2" fill="none">
+        <path d="M285,215 C320,205 340,225 372,215" stroke-dasharray="6 5"/>
+        <path d="M362,207 L374,215 L360,222" fill="#8CA0B3" stroke="none"/>
+      </g>
+      <text x="330" y="196" font-size="10" font-family="SF Mono,ui-monospace,monospace" fill="#8CA0B3" text-anchor="middle">레벨업!</text>
+
+      <!-- ============ RIGHT PHONE: level-up 3-choice ============ -->
+      <g>
+        <rect x="400" y="14" width="230" height="400" rx="18" fill="#0E1522" stroke="#7FE3F0" stroke-width="2"/>
+        <rect x="400" y="14" width="230" height="400" rx="18" fill="#000" opacity=".35"/>
+        <text x="515" y="66" font-size="14" font-family="SF Mono,ui-monospace,monospace" fill="#7FE3F0" text-anchor="middle" font-weight="bold">진열대에서 고르세요</text>
+        <text x="515" y="84" font-size="9" font-family="SF Mono,ui-monospace,monospace" fill="#8CA0B3" text-anchor="middle">LEVEL UP — 3택 1</text>
+
+        <!-- card 1 -->
+        <rect x="420" y="100" width="190" height="82" rx="8" fill="#121A2B" stroke="#FFC24B" stroke-width="2"/>
+        <circle cx="452" cy="141" r="17" fill="none" stroke="#FFC24B" stroke-width="2"/>
+        <path d="M452,128 L452,154 M440,140 A12 10 0 0 1 464,140" stroke="#FFC24B" stroke-width="2" fill="none"/>
+        <text x="480" y="134" font-size="12" fill="#F2F8FB" font-weight="bold" font-family="Apple SD Gothic Neo,sans-serif">장우산 Lv.3</text>
+        <text x="480" y="152" font-size="9.5" fill="#8CA0B3" font-family="Apple SD Gothic Neo,sans-serif">휘두르기 범위 +30%</text>
+        <text x="480" y="168" font-size="9" fill="#FFC24B" font-family="SF Mono,ui-monospace,monospace">★ 진화 1단계 전</text>
+
+        <!-- card 2 -->
+        <rect x="420" y="192" width="190" height="82" rx="8" fill="#121A2B" stroke="#3E6E7A" stroke-width="1.5"/>
+        <rect x="440" y="222" width="24" height="22" rx="3" fill="none" stroke="#7FE3F0" stroke-width="2"/>
+        <path d="M444,222 L452,212 L460,222" stroke="#7FE3F0" stroke-width="2" fill="none"/>
+        <text x="480" y="226" font-size="12" fill="#F2F8FB" font-weight="bold" font-family="Apple SD Gothic Neo,sans-serif">삼각김밥 투척 NEW</text>
+        <text x="480" y="244" font-size="9.5" fill="#8CA0B3" font-family="Apple SD Gothic Neo,sans-serif">부딪히면 3갈래 분열</text>
+        <text x="480" y="260" font-size="9" fill="#7FE3F0" font-family="SF Mono,ui-monospace,monospace">신규 무기</text>
+
+        <!-- card 3 -->
+        <rect x="420" y="284" width="190" height="82" rx="8" fill="#121A2B" stroke="#3E6E7A" stroke-width="1.5"/>
+        <circle cx="452" cy="325" r="14" fill="none" stroke="#7FE3F0" stroke-width="2"/>
+        <path d="M446,325 a6 6 0 0 1 12 0" fill="none" stroke="#7FE3F0" stroke-width="2"/>
+        <line x1="452" y1="311" x2="452" y2="305" stroke="#7FE3F0" stroke-width="2"/>
+        <text x="480" y="318" font-size="12" fill="#F2F8FB" font-weight="bold" font-family="Apple SD Gothic Neo,sans-serif">뜨끈한 어묵국물</text>
+        <text x="480" y="336" font-size="9.5" fill="#8CA0B3" font-family="Apple SD Gothic Neo,sans-serif">이동속도 +8% (패시브)</text>
+        <text x="480" y="352" font-size="9" fill="#8CA0B3" font-family="SF Mono,ui-monospace,monospace">패시브</text>
+
+        <text x="515" y="392" font-size="9" font-family="SF Mono,ui-monospace,monospace" fill="#8CA0B3" text-anchor="middle">광고 시청 ▸ 진열대 다시 채우기(리롤)</text>
+      </g>
+    </svg>
+    <div class="cap">SKETCH 02 — 좌: 인게임(이동만 조작, 자동공격). 우: 레벨업 3택을 <b>"진열대에서 고르기"</b>로 연출.</div>
+  </div>
+
+  <div class="receipt r3">
+    <div class="rhead">기획자 코멘트 · COMMENT #003</div>
+    <div class="rbody">레벨업 UI를 '진열대'로 만든 건 장식이 아니라 브랜딩.
+
+유저가 매 판 40번씩 보는 화면이 레벨업 3택이다. 여기가 제일 편의점다워야, 스크린샷 한 장만 돌아도 우리 게임인 줄 안다.
+
+리롤 이름도 '재입고'로 갈 것.</div>
+    <div class="barcode"></div>
+    <div class="rfoot">UI팀 전달 * POS-03</div>
+  </div>
+</section>
+
+<!-- ================================================== -->
+<section>
+  <div class="aisle"><span class="no">05</span><h2>무기 &amp; 진화 조합</h2><span class="sub">WEAPONS / EVOLUTION</span></div>
+
+  <p>무기는 전부 <strong>편의점에서 파는 것</strong>. 무기 6슬롯 + 패시브 6슬롯, <em>무기 만렙 + 지정 패시브 만렙 = 진화</em>는 장르 표준 문법을 따르되(학습비용 0), 조합의 맛은 소재에서 냅니다.</p>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>기본 무기</th><th>공격 방식</th><th>+ 패시브</th><th>진화</th><th>진화 효과</th></tr></thead>
+    <tbody>
+      <tr><td class="k">장우산</td><td>전방 부채꼴 휘두르기</td><td>휴대용 선풍기</td><td class="evo">태풍우산</td><td>회전 돌풍, 적 밀쳐냄 + 흡입</td></tr>
+      <tr><td class="k">삼각김밥</td><td>투척, 명중 시 3갈래 분열</td><td>참치캔</td><td class="evo">참치마요 폭격</td><td>분열 6갈래 + 폭발 장판</td></tr>
+      <tr><td class="k">바코드 스캐너</td><td>직선 레이저</td><td>건전지 4입</td><td class="evo">계산대 레이저</td><td>관통 레이저 + 적중 시 골드 추가 드랍</td></tr>
+      <tr><td class="k">전자레인지</td><td>지점 지정 범위 폭발(3초 예열)</td><td>즉석밥</td><td class="evo">1400W 대폭발</td><td>예열 1초, 범위 2배, 화상 도트</td></tr>
+      <tr><td class="k">테이프 클리너</td><td>주변 흡착 오라</td><td>물티슈</td><td class="evo">끈끈이 결계</td><td>광역 슬로우 + 접촉 데미지</td></tr>
+      <tr><td class="k">폐기 도시락</td><td>바닥 설치 트랩</td><td>핫팩</td><td class="evo">유통기한의 원한</td><td>독장판이 따라다니는 궤도형으로</td></tr>
+      <tr><td class="k">에너지드링크</td><td>버프형: 5초간 공속 2배</td><td>아메리카노 2+1</td><td class="evo">카페인 폭주</td><td>버프 중 무적 + 잔상 데미지</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="sketch">
+    <svg viewBox="0 0 700 150" width="700" height="150" role="img" aria-label="진화 조합 공식 스케치: 장우산 더하기 선풍기는 태풍우산">
+      <g font-family="Apple SD Gothic Neo,sans-serif" font-size="12" fill="#D7E3EC" text-anchor="middle">
+        <!-- umbrella -->
+        <circle cx="90" cy="62" r="34" fill="none" stroke="#7FE3F0" stroke-width="2"/>
+        <path d="M74,66 A18 14 0 0 1 106,66 M90,52 L90,80 M90,80 a5 5 0 0 0 8,-1" stroke="#7FE3F0" stroke-width="2" fill="none"/>
+        <text x="90" y="120">장우산 MAX</text>
+        <!-- plus -->
+        <text x="160" y="68" font-size="26" fill="#8CA0B3">+</text>
+        <!-- fan -->
+        <circle cx="235" cy="62" r="34" fill="none" stroke="#7FE3F0" stroke-width="2"/>
+        <circle cx="235" cy="58" r="12" fill="none" stroke="#7FE3F0" stroke-width="2"/>
+        <path d="M235,46 a10 10 0 0 1 6,18 M229,68 L241,68 M231,70 L239,80 M235,80 L231,80 239,80" stroke="#7FE3F0" stroke-width="1.6" fill="none"/>
+        <text x="235" y="120">선풍기 MAX</text>
+        <!-- arrow -->
+        <path d="M290,62 L360,62" stroke="#FFC24B" stroke-width="2.5"/>
+        <path d="M350,54 L364,62 L350,70" fill="#FFC24B"/>
+        <text x="325" y="46" font-size="10" fill="#FFC24B" font-family="SF Mono,ui-monospace,monospace">EVOLVE</text>
+        <!-- typhoon umbrella -->
+        <circle cx="450" cy="62" r="44" fill="none" stroke="#FFC24B" stroke-width="2.5"/>
+        <path d="M450,62 m-26,0 a26 26 0 0 1 26,-26 M450,62 m26,0 a26 26 0 0 1 -26,26 M450,40 A18 14 0 0 1 468,54 M436,70 L450,44 L450,78" stroke="#FFC24B" stroke-width="2" fill="none"/>
+        <text x="450" y="132" fill="#FFC24B" font-weight="bold">태풍우산</text>
+        <!-- note -->
+        <text x="600" y="52" font-size="11" fill="#8CA0B3" text-anchor="start">회전 돌풍 오라</text>
+        <text x="600" y="70" font-size="11" fill="#8CA0B3" text-anchor="start">적 밀쳐냄+흡입</text>
+        <path d="M540,58 L592,52" stroke="#3E6E7A" stroke-width="1.4" stroke-dasharray="3 3"/>
+      </g>
+    </svg>
+    <div class="cap">SKETCH 03 — 진화 공식은 장르 표준(무기 MAX + 지정 패시브). <b>학습비용 0</b>, 소재로만 차별화.</div>
+  </div>
+</section>
+
+<!-- ================================================== -->
+<section>
+  <div class="aisle"><span class="no">06</span><h2>시그니처 메커니즘 — 소문 게이지</h2><span class="sub">UNIQUE MECHANIC</span></div>
+
+  <div class="neon-box">
+    <div class="bt">RUMOR GAUGE — "괴담은 소문을 먹고 자란다"</div>
+    <p style="margin-bottom:8px">킬을 쌓을수록 <strong>소문 게이지</strong>가 차오릅니다. 게이지가 가득 찰 때마다 선택지가 뜹니다:</p>
+    <ul style="margin-bottom:8px">
+      <li><strong>"소문을 낸다"</strong> — 적 밀도 +25%, 경험치·골드 +40%, 희귀 무기 등장 확률 상승. 게이지 단계가 오를수록 배율 중첩.</li>
+      <li><strong>"소문을 묻는다"</strong> — 현상 유지 + 즉시 회복 아이템. 안전하게 간다.</li>
+    </ul>
+    <p style="margin:0">유저가 <em>매 판 난이도를 직접 베팅</em>하는 구조입니다. 고인물은 소문 5단계 "괴담 만개" 상태로 하이리스크 파밍을, 라이트 유저는 안전 운행을 — <strong>같은 스테이지가 두 개의 게임이 됩니다.</strong> 그리고 이 시스템의 이름이 세계관 그 자체라는 게 핵심입니다.</p>
+  </div>
+
+  <div class="receipt">
+    <div class="rhead">기획자 코멘트 · COMMENT #004</div>
+    <div class="rbody">뱀서라이크 아류가 망하는 패턴 = 시스템을 더하기만 함.
+
+우리 원칙: 장르 표준 문법(3택, 진화, 자석)은 그대로 두고, 새 시스템은 소문 게이지 딱 하나만 완성도 있게.
+
+하나가 특별하려면 나머지는 익숙해야 한다.</div>
+    <div class="barcode"></div>
+    <div class="rfoot">시스템 기획 원칙 * POS-04</div>
+  </div>
+</section>
+
+<!-- ================================================== -->
+<section>
+  <div class="aisle"><span class="no">07</span><h2>챕터 &amp; 보스 — 괴담 라인업</h2><span class="sub">CHAPTERS / BOSSES</span></div>
+
+  <p>챕터 = 편의점을 중심으로 한 <strong>동네의 확장</strong>. 스테이지가 넓어질수록 주인공의 행동반경이 넓어지고, 진상에 가까워집니다.</p>
+
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>CH</th><th>스테이지</th><th>주요 잡몹</th><th>5:00 보스</th><th>보스 컨셉</th></tr></thead>
+    <tbody>
+      <tr><td class="num">1</td><td class="k">편의점 앞 골목</td><td>그림자 행인, 검은 비닐봉지 떼</td><td>빨간 마스크</td><td>"나 예뻐?" 3택 질문 — 고르는 답에 따라 패턴 분기. 첫 보스부터 밈 제조기.</td></tr>
+      <tr><td class="num">2</td><td class="k">24시 코인노래방 상가</td><td>마이크 잡은 원혼, 스피커 노이즈</td><td>18번 방의 손님</td><td>노래 박자에 맞춰 탄막 발사. 리듬게임 하이브리드 보스전.</td></tr>
+      <tr><td class="num">3</td><td class="k">지하철 막차 승강장</td><td>얼굴 없는 승객들</td><td>오지 않는 막차</td><td>선로에서 돌진하는 열차형 보스. 승강장 = 좁고 긴 맵 특화.</td></tr>
+      <tr><td class="num">4</td><td class="k">재개발 아파트</td><td>층간소음 발소리, 벽에서 나오는 손</td><td>13층 여자</td><td>맵의 조명이 층별로 꺼지는 암전 기믹.</td></tr>
+      <tr><td class="num">5</td><td class="k">거울 미로 (이면 심층)</td><td>거울 속 나(플레이어 빌드 복사)</td><td>거울 귀신</td><td>내 무기를 그대로 쓰는 미러전 — 강한 빌드가 강한 적이 되는 역설.</td></tr>
+      <tr><td class="num">6</td><td class="k">새벽의 횡단보도</td><td>기억의 파편들</td><td>???</td><td>진엔딩. 스포일러 — 조각을 모은 자만 입장.</td></tr>
+    </tbody>
+  </table></div>
+
+  <div class="sketch">
+    <svg viewBox="0 0 720 200" width="720" height="200" role="img" aria-label="보스 러프 스케치 3종: 빨간 마스크, 18번 방의 손님, 거울 귀신">
+      <g font-family="Apple SD Gothic Neo,sans-serif" font-size="12" text-anchor="middle">
+        <!-- red mask -->
+        <g stroke="#FF5A5A" stroke-width="2" fill="none">
+          <circle cx="120" cy="80" r="42"/>
+          <path d="M96,92 Q120,116 144,92"/>
+          <path d="M96,92 Q120,100 144,92" opacity=".6"/>
+          <circle cx="104" cy="68" r="4" fill="#FF5A5A"/>
+          <circle cx="136" cy="68" r="4" fill="#FF5A5A"/>
+          <path d="M84,96 L60,120 M156,96 L180,120" stroke-dasharray="4 3"/>
+        </g>
+        <text x="120" y="158" fill="#D7E3EC" font-weight="bold">CH1 · 빨간 마스크</text>
+        <text x="120" y="176" fill="#8CA0B3" font-size="10.5">답을 고르면 패턴이 바뀐다</text>
+
+        <!-- karaoke ghost -->
+        <g stroke="#7FE3F0" stroke-width="2" fill="none">
+          <circle cx="360" cy="76" r="38"/>
+          <rect x="348" y="106" width="24" height="34" rx="10"/>
+          <line x1="360" y1="140" x2="360" y2="118"/>
+          <path d="M406,54 q8,-6 6,-16 M416,66 q12,-8 9,-24 M426,80 q16,-10 12,-32" opacity=".8"/>
+          <circle cx="348" cy="70" r="3" fill="#7FE3F0"/><circle cx="372" cy="70" r="3" fill="#7FE3F0"/>
+          <path d="M350,88 Q360,82 370,88"/>
+        </g>
+        <text x="360" y="158" fill="#D7E3EC" font-weight="bold">CH2 · 18번 방의 손님</text>
+        <text x="360" y="176" fill="#8CA0B3" font-size="10.5">박자에 맞춰 탄막이 온다</text>
+
+        <!-- mirror ghost -->
+        <g stroke="#FFC24B" stroke-width="2" fill="none">
+          <rect x="560" y="34" width="84" height="112" rx="8"/>
+          <line x1="560" y1="34" x2="644" y2="146" opacity=".35"/>
+          <circle cx="602" cy="74" r="18"/>
+          <path d="M602,92 L602,124 M588,104 L616,104" />
+          <circle cx="596" cy="70" r="2.6" fill="#FFC24B"/><circle cx="608" cy="70" r="2.6" fill="#FFC24B"/>
+        </g>
+        <text x="602" y="168" fill="#D7E3EC" font-weight="bold">CH5 · 거울 귀신</text>
+        <text x="602" y="186" fill="#8CA0B3" font-size="10.5">내 빌드를 그대로 복사</text>
+      </g>
+    </svg>
+    <div class="cap">SKETCH 04 — 보스 러프. 무섭지 않게, <b>패러디 가능한 공포</b>로. (아트 수위: 쿠키런 유령 레벨)</div>
+  </div>
+</section>
+
+<!-- ================================================== -->
+<section>
+  <div class="aisle"><span class="no">08</span><h2>플레이어블 캐릭터 — 알바 로스터</h2><span class="sub">CHARACTERS</span></div>
+
+  <p>캐릭터 = <strong>이 편의점을 거쳐간 알바생들</strong>. 각자 시작 무기와 패시브 하나로 플레이 스타일이 갈립니다. 루프 안에서 구출하면 로스터에 합류(가챠 없는 언락도 가능한 구조 — BM은 §10).</p>
+
+  <div class="grid2">
+    <div class="card"><span class="mono">기본 캐릭터</span><h4>복학생 준호</h4><p>시작 무기: 장우산. 패시브 "군필": 피격 시 1회 무적 0.5초. 밸런스형 튜토리얼 캐릭터.</p></div>
+    <div class="card"><span class="mono">CH1 구출</span><h4>격투부 유나</h4><p>시작 무기: 테이프 클리너. 근접 데미지 +20%, 이동속도 높음. 인파이터.</p></div>
+    <div class="card"><span class="mono">CH2 구출</span><h4>취준생 세리</h4><p>시작 무기: 바코드 스캐너. 골드 획득 +25% — "돈이 급하다". 파밍 특화.</p></div>
+    <div class="card"><span class="mono">CH3 구출</span><h4>전직 점장 강씨</h4><p>시작 무기: 폐기 도시락. 소문 게이지 충전 +30% — 실종됐던 그 점장. 스토리 키맨.</p></div>
+  </div>
+</section>
+
+<!-- ================================================== -->
+<section>
+  <div class="aisle"><span class="no">09</span><h2>메타 진행 — 편의점이 자란다</h2><span class="sub">META PROGRESSION</span></div>
+
+  <p>영구 성장은 스탯 트리 대신 <strong>편의점 리모델링</strong>으로 시각화합니다. 판이 끝날 때 얻은 골드로 매장을 키우면, 성장이 숫자가 아니라 <em>공간의 변화</em>로 보입니다 — 방치형 유저까지 끌어오는 접점.</p>
+  <ul>
+    <li><strong>매대 확장</strong> → 무기 슬롯·시작 선택지 증가</li>
+    <li><strong>포스기 업그레이드</strong> → 골드 획득률 상승</li>
+    <li><strong>CCTV 설치</strong> → 미니맵·보스 예고 표시</li>
+    <li><strong>야외 파라솔</strong> → 구출한 단골 NPC가 앉아 상시 버프 (단골 도감 = 수집 콘텐츠)</li>
+    <li><strong>워크인 냉장고</strong> → 기억 조각(스토리) 보관소. 서사 열람실을 냉장고로.</li>
+  </ul>
+
+  <div class="receipt r2">
+    <div class="rhead">기획자 코멘트 · COMMENT #005</div>
+    <div class="rbody">스탯 트리는 스프레드시트처럼 생겼고, 편의점은 내 가게처럼 생겼다.
+
+같은 +5% 업그레이드라도 "매대에 신상품이 깔리는" 연출이면 애착이 생긴다. 애착은 리텐션이다.
+
+D30 리텐션의 절반은 여기서 나온다고 본다.</div>
+    <div class="barcode"></div>
+    <div class="rfoot">라이브옵스 설계 메모 * POS-05</div>
+  </div>
+</section>
+
+<!-- ================================================== -->
+<section>
+  <div class="aisle"><span class="no">10</span><h2>BM &amp; 시장성 — 숫자로 설득</h2><span class="sub">BUSINESS</span></div>
+
+  <h3>시장 근거</h3>
+  <ul>
+    <li>탕탕특공대(Survivor.io)는 출시 후 <strong>누적 수억 달러 규모</strong>의 매출을 낸 것으로 알려진 하이브리드 캐주얼 대표작 — 이 장르는 광고+IAP 하이브리드 BM이 실증된 몇 안 되는 장르입니다.</li>
+    <li>Vampire Survivors는 <strong>수백만 장</strong> 판매 + 올해의 게임 후보권 — 코어 유저층도 두터움을 증명.</li>
+    <li>반면 국내 정서 기반 뱀서라이크는 사실상 공백. <strong>"한국 배경 + 한국 괴담"은 국내 UA 단가를 낮추고, 일본·동남아에는 K-호러 프리미엄으로 작동</strong>합니다(일본은 괴담 문화 수용도가 가장 높은 시장).</li>
+  </ul>
+
+  <h3>수익 설계 (하이브리드)</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>수단</th><th>내용</th><th>세계관 연출</th></tr></thead>
+    <tbody>
+      <tr><td class="k">보상형 광고</td><td>부활 1회 / 3택 리롤 / 클리어 보상 2배</td><td>부활 = <em>"아침 교대 알바가 일찍 와줬다"</em></td></tr>
+      <tr><td class="k">배틀패스</td><td>시즌제, 무료/유료 트랙</td><td>이름부터 <em>"야간수당"</em>. 시즌 = 새 괴담 챕터</td></tr>
+      <tr><td class="k">스킨</td><td>알바 유니폼·우산·편의점 간판 테마</td><td>능력치 없음(코스메틱 온리) — 국내 반감 회피</td></tr>
+      <tr><td class="k">스타터 팩</td><td>소액 광고 제거 + 캐릭터 1종</td><td><em>"점장 승진 패키지"</em></td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>가챠 없는 캐릭터 획득</strong>(플레이 구출 + 일부 유료 직판)을 원칙으로 합니다. 뱀서라이크 유저층은 P2W에 가장 민감한 집단이고, 착한 BM 평판 자체가 이 장르에서는 마케팅입니다.</p>
+
+  <h3>바이럴 설계</h3>
+  <ul>
+    <li><strong>4:44 챌린지</strong> — 매판 4시 44분의 CCTV 노이즈 순간을 스크린샷/클립으로 공유하는 각인 포인트.</li>
+    <li><strong>빨간 마스크의 3택 질문</strong> — "당신의 선택은?" 형태의 숏폼·커뮤니티 밈 소재.</li>
+    <li><strong>기억 조각 고찰</strong> — 유튜브 스토리 고찰 영상은 서브컬처 게임 무료 마케팅의 정석.</li>
+  </ul>
+</section>
+
+<!-- ================================================== -->
+<section>
+  <div class="aisle"><span class="no">11</span><h2>리스크 — 미리 답해두기</h2><span class="sub">RISKS / ANSWERS</span></div>
+
+  <div class="danger-box neon-box">
+    <div class="bt">Q1. "호러면 라이트 유저가 이탈하지 않나?"</div>
+    <p style="margin:0">아트 수위를 '쿠키런의 유령' 레벨로 고정합니다(§02 코멘트). 점프스케어 금지, 실사풍 금지. 공포는 <strong>연출(4:44 노이즈, 암전)</strong>로만, 비주얼은 끝까지 귀엽게. 오싹함과 무서움은 다릅니다.</p>
+  </div>
+  <div class="danger-box neon-box">
+    <div class="bt">Q2. "뱀서라이크 레드오션 아닌가?"</div>
+    <p style="margin:0">레드오션인 건 <strong>판타지 뱀서라이크</strong>입니다. 스토어에서 우리 스크린샷 옆에 놓일 경쟁작 중 편의점은 없습니다. 그리고 포화 시장은 곧 "유저가 조작을 이미 배워둔 시장" — 튜토리얼 비용이 0입니다.</p>
+  </div>
+  <div class="danger-box neon-box">
+    <div class="bt">Q3. "괴담 소재 표절/저작권 문제는?"</div>
+    <p style="margin:0">빨간 마스크·거울 귀신 등은 <strong>구전 민담(퍼블릭 도메인)</strong>입니다. 특정 작품의 고유 디자인만 피하면 되고, 오히려 5~6챕터부터는 유저 공모로 '신작 괴담'을 받는 UGC 이벤트가 가능합니다 — 소문 게이지 세계관과도 맞물리죠.</p>
+  </div>
+</section>
+
+<!-- ================================================== -->
+<section>
+  <div class="aisle"><span class="no">12</span><h2>다음 단계 — 2주 프로토타입</h2><span class="sub">NEXT STEP</span></div>
+
+  <p>말로 하는 설득은 여기까지. <strong>재미는 프로토타입이 증명합니다.</strong> 웹에서 바로 플레이 가능한 수직 슬라이스를 이렇게 제안합니다:</p>
+  <ul>
+    <li><strong>1주차</strong> — 이동 + 자동공격 + 웨이브 스포너 + 레벨업 3택 (무기 3종: 우산·삼각김밥·스캐너)</li>
+    <li><strong>2주차</strong> — 소문 게이지 + 4:44 이벤트 + 빨간 마스크 보스전 + 6:00 일출 클리어 연출</li>
+    <li><strong>검증 지표</strong> — "한 판 더" 비율(재도전율)과 평균 세션 길이. 소문 게이지의 '소문 낸다' 선택률로 리스크 베팅 재미를 정량 확인.</li>
+  </ul>
+
+  <div class="receipt r3">
+    <div class="rhead">기획자 코멘트 · COMMENT #006</div>
+    <div class="rbody">이 문서에서 단 하나만 남긴다면:
+
+"매 판의 엔딩이 아침이다."
+
+18분을 버틴 유저에게 해 뜨는 하늘을 보여주는 게임. 뱀서라이크 100개 중에 클리어의 감정을 설계한 게임은 없었다. 우리가 처음이 되면 된다.</div>
+    <div class="barcode"></div>
+    <div class="rfoot">*** 감사합니다. 또 오세요 ***</div>
+  </div>
+</section>
+
+<footer>새벽 3시의 편의점 — GAME PITCH v1.0 · 2026.07 · 이 문서는 프로토타입 제작 승인을 위해 작성되었습니다</footer>
+
+</div>

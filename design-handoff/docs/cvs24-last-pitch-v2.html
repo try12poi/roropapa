@@ -1,0 +1,435 @@
+<meta charset="utf-8">
+<title>안심24: 라스트 스토어 — 기획 피치 v2.0</title>
+<style>
+  :root{
+    --ink:#0A0E17;--panel:#121A2B;--panel-2:#0E1522;--line:#22304A;
+    --fluor:#7FE3F0;--fluor-dim:#3E6E7A;--danger:#FF5A5A;--amber:#FFC24B;
+    --paper:#F2EDDF;--paper-ink:#2A2620;--text:#D7E3EC;--muted:#8CA0B3;
+    --mono:"SF Mono",ui-monospace,Menlo,Consolas,monospace;
+    --sans:"Apple SD Gothic Neo","Pretendard","Noto Sans KR","Malgun Gothic",sans-serif;
+  }
+  html{color-scheme:dark}
+  body{background:var(--ink);color:var(--text);font-family:var(--sans);line-height:1.75;margin:0;font-size:16.5px;
+    background-image:radial-gradient(1200px 500px at 50% -100px,#16233B 0%,transparent 70%)}
+  .wrap{max-width:880px;margin:0 auto;padding:0 24px 120px}
+  header{padding:88px 0 56px;text-align:center}
+  .dday{font-family:var(--mono);font-size:clamp(52px,9vw,84px);font-weight:700;color:var(--danger);letter-spacing:.04em;
+    text-shadow:0 0 24px rgba(255,90,90,.45),0 0 60px rgba(255,90,90,.18);line-height:1}
+  h1{font-size:clamp(32px,6vw,52px);font-weight:900;letter-spacing:-.02em;margin:18px 0 10px;text-wrap:balance;color:#F2F8FB}
+  .logline{font-size:19px;color:var(--fluor);font-weight:600;margin:0 0 26px;text-wrap:balance}
+  .tags{display:flex;gap:8px;justify-content:center;flex-wrap:wrap}
+  .tag{font-family:var(--mono);font-size:12px;letter-spacing:.08em;border:1px solid var(--line);border-radius:3px;
+    padding:5px 11px;color:var(--muted);background:var(--panel-2)}
+  .tag.hot{color:var(--amber);border-color:#4a3c1c}
+  section{margin-top:84px}
+  .aisle{display:flex;align-items:baseline;gap:14px;margin-bottom:22px;border-bottom:1px solid var(--line);padding-bottom:14px}
+  .aisle .no{font-family:var(--mono);font-size:13px;color:var(--ink);background:var(--fluor);padding:3px 9px;border-radius:2px;
+    font-weight:700;letter-spacing:.05em;flex:none;transform:translateY(-2px)}
+  .aisle h2{font-size:26px;font-weight:800;margin:0;letter-spacing:-.01em}
+  .aisle .sub{font-family:var(--mono);font-size:12px;color:var(--muted);margin-left:auto;letter-spacing:.06em}
+  h3{font-size:18px;font-weight:800;margin:34px 0 10px;color:#EAF3F8}
+  p{margin:0 0 16px;max-width:66ch}
+  strong{color:#F2F8FB}
+  .lead{font-size:18px;color:#E4EEF5}
+  em{color:var(--fluor);font-style:normal;font-weight:600}
+  ul{margin:0 0 16px;padding-left:22px}
+  li{margin-bottom:8px;max-width:62ch}
+  li::marker{color:var(--fluor-dim)}
+  .receipt{background:var(--paper);color:var(--paper-ink);font-family:var(--mono);font-size:13.5px;line-height:1.65;
+    max-width:400px;padding:18px 20px 14px;margin:40px auto;box-shadow:0 10px 30px rgba(0,0,0,.5);position:relative;
+    --tilt:-1.2deg;transform:rotate(var(--tilt))}
+  .receipt.r2{--tilt:1.4deg}.receipt.r3{--tilt:-0.8deg}
+  .receipt::before,.receipt::after{content:"";position:absolute;left:0;right:0;height:8px;
+    background-image:linear-gradient(45deg,var(--paper) 25%,transparent 25%),linear-gradient(-45deg,var(--paper) 25%,transparent 25%);
+    background-size:12px 12px;background-repeat:repeat-x}
+  .receipt::before{top:-7px}.receipt::after{bottom:-7px;transform:scaleY(-1)}
+  .receipt .rhead{text-align:center;border-bottom:1px dashed #9a917e;padding-bottom:8px;margin-bottom:10px;font-weight:700;
+    letter-spacing:.14em;font-size:12px}
+  .receipt .rbody{white-space:pre-line}
+  .receipt .barcode{height:34px;margin-top:12px;
+    background:repeating-linear-gradient(90deg,#2A2620 0 2px,transparent 2px 4px,#2A2620 4px 7px,transparent 7px 9px,#2A2620 9px 10px,transparent 10px 14px)}
+  .receipt .rfoot{font-size:11px;text-align:center;margin-top:6px;letter-spacing:.1em;color:#6d6555}
+  .sketch{background:var(--panel-2);border:1px solid var(--line);border-radius:6px;padding:22px 18px 12px;margin:26px 0;overflow-x:auto}
+  .sketch svg{display:block;margin:0 auto;max-width:100%;height:auto}
+  .cap{font-family:var(--mono);font-size:12px;color:var(--muted);text-align:center;margin-top:12px;letter-spacing:.05em}
+  .cap b{color:var(--fluor);font-weight:700}
+  .tbl-wrap{overflow-x:auto;margin:20px 0;border:1px solid var(--line);border-radius:6px}
+  table{border-collapse:collapse;width:100%;font-size:14.5px;min-width:620px}
+  th{font-family:var(--mono);font-size:11.5px;letter-spacing:.09em;text-align:left;color:var(--muted);background:var(--panel);
+    padding:10px 14px;border-bottom:1px solid var(--line);white-space:nowrap}
+  td{padding:11px 14px;border-bottom:1px solid #1a2438;vertical-align:top}
+  tr:last-child td{border-bottom:none}
+  td.k{color:#F2F8FB;font-weight:700;white-space:nowrap}
+  td.g{color:var(--amber);font-weight:700;white-space:nowrap}
+  .neon-box{border:1px solid #2a5560;border-left:3px solid var(--fluor);
+    background:linear-gradient(180deg,#10202A 0%,var(--panel-2) 100%);border-radius:0 6px 6px 0;padding:20px 24px;margin:26px 0}
+  .neon-box .bt{font-family:var(--mono);font-size:12px;color:var(--fluor);letter-spacing:.12em;margin-bottom:8px;font-weight:700}
+  .danger-box{border-color:#5c2a2a;border-left-color:var(--danger)}
+  .danger-box .bt{color:var(--danger)}
+  .grid2{display:grid;grid-template-columns:1fr 1fr;gap:16px;margin:20px 0}
+  @media(max-width:640px){.grid2{grid-template-columns:1fr}}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:6px;padding:18px 20px}
+  .card h4{margin:0 0 6px;font-size:15.5px;color:#F2F8FB}
+  .card p{font-size:14px;color:var(--muted);margin:0}
+  .card .mono{font-family:var(--mono);font-size:11.5px;color:var(--fluor);letter-spacing:.08em;display:block;margin-bottom:8px}
+  footer{margin-top:100px;border-top:1px solid var(--line);padding-top:28px;font-family:var(--mono);font-size:12px;
+    color:var(--muted);text-align:center;letter-spacing:.06em}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div class="dday">D+37</div>
+  <h1>안심24: 라스트 스토어</h1>
+  <p class="logline">"오늘도 살아남았다. 편의점은 아직 우리 것이다."</p>
+  <div class="tags">
+    <span class="tag">좀비 아포칼립스</span>
+    <span class="tag">SURVIVOR-LIKE</span>
+    <span class="tag">편의점 사수</span>
+    <span class="tag hot">생존자 경영</span>
+    <span class="tag">세로모드 · 원핸드</span>
+  </div>
+</header>
+
+<!-- ============================== -->
+<section>
+  <div class="aisle"><span class="no">01</span><h2>30초 피치</h2><span class="sub">THE PITCH</span></div>
+  <p class="lead">좀비 아포칼립스에서 가장 버티기 좋은 곳은 어디인가? 군부대도, 마트도 아니다 — <strong>물·식량·배터리·의약품·부탄가스가 한 건물에 진열된 편의점</strong>이다. 이 게임은 그 당연한 상상을 그대로 게임으로 만든다.</p>
+  <ul>
+    <li><strong>검증된 조작</strong> — 탕탕특공대식 이동+자동공격. 유저가 이미 배워둔 문법이라 튜토리얼 비용 0.</li>
+    <li><strong>검증된 소재</strong> — 좀비는 영원한 스테디셀러. 거기에 "한국 편의점"이라는 아무도 안 쓴 무대를 결합.</li>
+    <li><strong>이 게임만의 것</strong> — 뱀서라이크 위에 얹은 <em>생존자 경영</em>: 죽지 않는 코어 5인과 죽을 수 있는 합류 생존자들, 한정된 배치 슬롯, 줄어드는 식량, 그리고 "누구를 내보낼 것인가"라는 선택. 전투는 손이 하고, 밤마다 마음이 무거워지는 게임.</li>
+  </ul>
+  <div class="receipt">
+    <div class="rhead">기획자 코멘트 · COMMENT #v2-001</div>
+    <div class="rbody">뱀서라이크의 수명 문제(2주 후 이탈)의 답이 생존자 경영이다.
+
+빌드는 반복되면 질리지만, "우리 편의점 사람들"은 정이 든다. 정든 것들은 잃을 수 있어야 무거워진다.
+
+그래서 합류 생존자는 죽는다. 이 결정이 이 게임의 심장이다.</div>
+    <div class="barcode"></div>
+    <div class="rfoot">2026-07-13 * D+1</div>
+  </div>
+</section>
+
+<!-- ============================== -->
+<section>
+  <div class="aisle"><span class="no">02</span><h2>스토리</h2><span class="sub">NARRATIVE</span></div>
+
+  <h3>프롤로그 — 그날 밤 (= 튜토리얼)</h3>
+  <p>새벽의 안심24. 야간 알바 <strong>주인공</strong>이 혼자 매장을 지키는데, 점장님이 비틀거리며 들어온다. "괜찮으세요?" — 간호사 시험까지 붙은 주인공은 본능적으로 다가가 살핀다. 그 순간 점장이 <strong>변한다.</strong> 집기를 집어 들고(첫 무기 튜토리얼) 어렵게, 정말 어렵게 막아낸다(첫 전투 = 튜토리얼 보스). 숨을 고르는데 통유리 밖 — <em>거리를 가득 메운 좀비 떼.</em> 문을 두드리는 생존자 4인이 뛰어들어오고, 셔터가 내려간다. <strong>D+1.</strong></p>
+
+  <h3>1막 — 셔터 안쪽</h3>
+  <p>매대 바리케이드, 물자 배분, 역할 분담. 주인공은 점장의 시신을 수습하다 목에 걸린 <strong>카드키</strong>를 발견한다. 카드키가 여는 곳 — 지하 1층. 문이 열리자 드러나는 <strong>완비된 종말 대비 벙커.</strong> 점장은 세상의 끝을 믿던 음모론자였다. 비상식량, 생수, 발전기, 그리고 벽장 가득한 미등록 무기들. "점장님… 대체 뭐 하던 분이에요." 이 벙커가 생존의 시작이 된다.</p>
+
+  <h3>2막 — 버티는 날들</h3>
+  <p>벙커 물자에는 끝이 있다. 낮에는 바깥으로 원정을 나가고, 밤에는 몰려오는 무리를 막는다. 도망쳐온 생존자들이 하나둘 셔터를 두드리고, 로스터가 늘수록 식량은 빨리 준다. 그리고 곳곳에서 발견되는 <strong>점장의 일지</strong> — 그는 왜 이 날을 준비하고 있었나? 일지의 마지막 장을 향해 미스터리가 쌓인다.</p>
+
+  <h3>3막 — 지켜지는 곳에서, 지키는 곳으로</h3>
+  <p>라디오의 구조 방송은 끊긴 지 오래. 그런데 안심24의 불빛을 보고 사람들이 계속 찾아온다. 편의점은 피난처가 되고, 이야기는 닫히지 않는다 — <strong>"오늘도 살아남았다. D+37."</strong> 매일 아침 해가 뜨는 것이 하루의 클리어이고, 생존 일수가 곧 명예다.</p>
+
+  <div class="neon-box"><div class="bt">기록되는 것들 — 이 게임의 리더보드</div>
+  <p style="margin:0"><strong>생존 일수 D+n</strong> / <strong>함께한 생존자 수</strong> / <strong>떠나보낸 생존자 수</strong>. 벙커 벽에는 죽은 생존자들의 폴라로이드가 붙는 <em>추모벽</em>이 있다. 숫자가 아니라 얼굴로 남는 기록 — 스크린샷 공유 포인트.</p></div>
+</section>
+
+<!-- ============================== -->
+<section>
+  <div class="aisle"><span class="no">03</span><h2>코어 루프 — 하루가 한 판</h2><span class="sub">CORE LOOP</span></div>
+
+  <div class="sketch">
+    <svg viewBox="0 0 780 240" width="780" height="240" role="img" aria-label="하루 사이클: 낮 원정, 밤 방어, 아침 정산의 순환 구조">
+      <g font-family="Apple SD Gothic Neo,sans-serif" text-anchor="middle">
+        <!-- day -->
+        <rect x="40" y="60" width="200" height="110" rx="10" fill="#241E14" stroke="#FFC24B" stroke-width="2.5"/>
+        <text x="140" y="95" font-size="16" font-weight="800" fill="#FFC24B">낮 — 물자 원정</text>
+        <text x="140" y="120" font-size="12" fill="#D7E3EC">뱀서라이크 런 (파밍·구출)</text>
+        <text x="140" y="140" font-size="11" fill="#8CA0B3">야외는 안전, 실내는 교전 지역</text>
+        <text x="140" y="157" font-size="11" fill="#8CA0B3">해 지기 전에 돌아올 것</text>
+        <!-- night -->
+        <rect x="290" y="60" width="200" height="110" rx="10" fill="#141018" stroke="#FF5A5A" stroke-width="2.5"/>
+        <text x="390" y="95" font-size="16" font-weight="800" fill="#FF5A5A">밤 — 편의점 방어</text>
+        <text x="390" y="120" font-size="12" fill="#D7E3EC">웨이브 디펜스 (수성)</text>
+        <text x="390" y="140" font-size="11" fill="#8CA0B3">배치 슬롯에 생존자 배치</text>
+        <text x="390" y="157" font-size="11" fill="#8CA0B3">바리케이드 붕괴 = 게임 오버</text>
+        <!-- morning -->
+        <rect x="540" y="60" width="200" height="110" rx="10" fill="#10202A" stroke="#7FE3F0" stroke-width="2.5"/>
+        <text x="640" y="95" font-size="16" font-weight="800" fill="#7FE3F0">아침 — D+1</text>
+        <text x="640" y="120" font-size="12" fill="#D7E3EC">정산·건설·결정 (경영)</text>
+        <text x="640" y="140" font-size="11" fill="#8CA0B3">시설 확장, 배치 변경</text>
+        <text x="640" y="157" font-size="11" fill="#8CA0B3">배급·방출·연구 결정</text>
+        <!-- arrows -->
+        <g stroke="#8CA0B3" stroke-width="2" fill="#8CA0B3">
+          <line x1="240" y1="115" x2="282" y2="115"/><polygon points="280,108 292,115 280,122"/>
+          <line x1="490" y1="115" x2="532" y2="115"/><polygon points="530,108 542,115 530,122"/>
+        </g>
+        <path d="M640,178 C640,225 140,225 140,178" fill="none" stroke="#8CA0B3" stroke-width="2" stroke-dasharray="6 5"/>
+        <polygon points="133,182 140,170 147,182" fill="#8CA0B3"/>
+        <text x="390" y="215" font-size="11.5" fill="#8CA0B3" font-family="SF Mono,ui-monospace,monospace">해가 뜨면 생존 일수 +1 — 매일 아침이 클리어 연출</text>
+        <!-- sun -->
+        <circle cx="740" cy="36" r="11" fill="none" stroke="#FFC24B" stroke-width="2"/>
+        <g stroke="#FFC24B" stroke-width="2"><line x1="740" y1="18" x2="740" y2="12"/><line x1="726" y1="24" x2="722" y2="20"/><line x1="754" y1="24" x2="758" y2="20"/></g>
+      </g>
+    </svg>
+    <div class="cap">SKETCH v2-01 — 하루 사이클. <b>파밍(낮) → 수성(밤) → 경영(아침)</b> 3박자가 매일 반복되며, 셋의 비중을 유저가 조절한다.</div>
+  </div>
+
+  <div class="neon-box"><div class="bt">해의 법칙 — 이 세계의 좀비 규칙</div>
+  <p style="margin:0"><strong>좀비는 해를 싫어한다.</strong> 그래서 밤에 몰려나오고, 낮에는 실내와 그늘에 숨는다. 이 규칙 하나가 게임 전체를 설명한다: ① 낮의 거리(야외)는 비교적 안전한 파밍 구간 ② 물자와 생존자가 있는 <em>실내는 어둠 속 좀비와의 교전 지역</em>(미니 던전) ③ 그리고 <strong>해가 지기 전에 돌아와야 한다</strong> — 일몰 타이머를 넘기고 밤거리에 남으면, 깨어난 호드 전부와 만난다.</p></div>
+
+  <ul>
+    <li><strong>낮 원정 = 파밍 + 구출</strong> — 원정대(1~3인)로 나가는 뱀서라이크 런. 야외에서는 물자를 줍고, 물자가 몰려 있는 실내(마트·약국·아파트)에 들어가면 숨어 있던 좀비들과 교전. 이동+자동공격, 레벨업 3택 유지. 일몰 타이머가 모든 판단을 압박한다 — "저 건물 하나만 더 털까, 지금 돌아갈까."</li>
+    <li><strong>생존자 구출 — 데려갈 것인가</strong> — 실내에서 생존자를 발견하면 <em>정보 카드(직업 · 능력 · 나이 · 식량 소모)</em>를 보고 구출 여부를 그 자리에서 결정한다. 데려가면 귀환까지 호위해야 하고, 편의점에 들어온 순간부터 밥을 먹는다. 지나치면… 다음 원정에서 그 방은 비어 있을 수도 있다.</li>
+    <li><strong>밤 방어</strong> — 해가 지면 좀비의 시간. 편의점 배치도의 슬롯(셔터 앞·창문·옥상·지하 입구)에 생존자를 배치하고 웨이브를 막는다. 주인공은 직접 조작, 배치된 생존자는 자동 전투. 며칠 주기로 <em>대규모 호드</em>(바둑기사가 예고).</li>
+    <li><strong>아침 정산</strong> — 물자 정산, 시설 건설, 부상자 치료, 배치 변경, 그리고 결정들(배급량, 방출, 연구). 하루 세션 목표 15~20분.</li>
+  </ul>
+</section>
+
+<!-- ============================== -->
+<section>
+  <div class="aisle"><span class="no">04</span><h2>무대 — 단독건물 안심24</h2><span class="sub">THE STORE</span></div>
+
+  <div class="sketch">
+    <svg viewBox="0 0 800 430" width="800" height="430" role="img" aria-label="안심24 단면도: 옥상, 지상 1층 매장, 지하 1층 벙커의 3층 구조">
+      <g font-family="Apple SD Gothic Neo,sans-serif">
+        <!-- ground line -->
+        <line x1="30" y1="250" x2="770" y2="250" stroke="#22304A" stroke-width="3"/>
+        <!-- rooftop -->
+        <rect x="150" y="60" width="440" height="14" fill="#1A2334" stroke="#7FE3F0" stroke-width="2"/>
+        <rect x="150" y="74" width="440" height="60" fill="#0E1522" stroke="#22304A" stroke-width="1.5"/>
+        <text x="370" y="52" font-size="15" font-weight="800" fill="#7FE3F0" text-anchor="middle">옥상 — 감시탑 · 텃밭 · 라디오 안테나</text>
+        <!-- antenna -->
+        <line x1="560" y1="60" x2="560" y2="14" stroke="#7FE3F0" stroke-width="2"/>
+        <path d="M548,26 q12,-10 24,0 M542,34 q18,-16 36,0" fill="none" stroke="#3E6E7A" stroke-width="1.5"/>
+        <!-- planter boxes -->
+        <g fill="#241E14" stroke="#FFC24B" stroke-width="1.5">
+          <rect x="180" y="108" width="60" height="18"/><rect x="255" y="108" width="60" height="18"/>
+        </g>
+        <g stroke="#7ED07E" stroke-width="2"><path d="M195,108 q3,-10 6,0 M215,108 q3,-10 6,0 M270,108 q3,-10 6,0 M292,108 q3,-10 6,0"/></g>
+        <!-- watchtower -->
+        <rect x="470" y="88" width="46" height="46" fill="#12222E" stroke="#3E6E7A" stroke-width="2"/>
+        <circle cx="493" cy="104" r="7" fill="none" stroke="#7FE3F0" stroke-width="2"/>
+        <line x1="498" y1="109" x2="506" y2="117" stroke="#7FE3F0" stroke-width="2"/>
+        <!-- 1F -->
+        <rect x="150" y="134" width="440" height="116" fill="#101826" stroke="#FFC24B" stroke-width="2.5"/>
+        <text x="370" y="158" font-size="15" font-weight="800" fill="#FFC24B" text-anchor="middle">지상 1층 — 매장 = 밤 방어전의 무대</text>
+        <!-- shelves -->
+        <g fill="#1A2334" stroke="#C9A96A" stroke-width="1.5">
+          <rect x="180" y="180" width="80" height="40"/><rect x="290" y="180" width="80" height="40"/><rect x="400" y="180" width="80" height="40"/>
+        </g>
+        <text x="230" y="205" font-size="10" fill="#C9A96A" text-anchor="middle">매대=엄폐물</text>
+        <!-- barricaded shutter -->
+        <g stroke="#FF5A5A" stroke-width="2.5"><line x1="590" y1="140" x2="590" y2="250"/><line x1="583" y1="160" x2="597" y2="150"/><line x1="583" y1="190" x2="597" y2="180"/><line x1="583" y1="220" x2="597" y2="210"/></g>
+        <text x="640" y="170" font-size="11" fill="#FF5A5A">셔터+바리케이드</text>
+        <text x="640" y="188" font-size="10.5" fill="#8CA0B3">붕괴 = 게임 오버</text>
+        <!-- zombies outside -->
+        <g fill="#141B2B" stroke="#3E4F6E" stroke-width="1.5">
+          <circle cx="680" cy="236" r="12"/><circle cx="710" cy="240" r="10"/><circle cx="738" cy="234" r="11"/>
+        </g>
+        <g fill="#FF5A5A"><circle cx="676" cy="234" r="2"/><circle cx="684" cy="234" r="2"/><circle cx="707" cy="238" r="1.8"/><circle cx="713" cy="238" r="1.8"/><circle cx="734" cy="232" r="2"/><circle cx="742" cy="232" r="2"/></g>
+        <!-- B1 bunker -->
+        <rect x="150" y="250" width="440" height="120" fill="#0B1220" stroke="#7FE3F0" stroke-width="2.5" stroke-dasharray="8 5"/>
+        <text x="370" y="276" font-size="15" font-weight="800" fill="#7FE3F0" text-anchor="middle">지하 1층 — 점장의 벙커 (카드키 해금)</text>
+        <g fill="#12222E" stroke="#3E6E7A" stroke-width="1.5">
+          <rect x="180" y="292" width="90" height="56"/><rect x="290" y="292" width="90" height="56"/><rect x="400" y="292" width="90" height="56"/>
+        </g>
+        <text x="225" y="315" font-size="10.5" fill="#8CA0B3" text-anchor="middle">물자고</text>
+        <text x="225" y="331" font-size="9.5" fill="#8CA0B3" text-anchor="middle">비상식량·생수</text>
+        <text x="335" y="315" font-size="10.5" fill="#8CA0B3" text-anchor="middle">무기고</text>
+        <text x="335" y="331" font-size="9.5" fill="#8CA0B3" text-anchor="middle">미등록 화기들</text>
+        <text x="445" y="315" font-size="10.5" fill="#8CA0B3" text-anchor="middle">발전기실</text>
+        <text x="445" y="331" font-size="9.5" fill="#8CA0B3" text-anchor="middle">전기·냉장 유지</text>
+        <!-- locked deepest door -->
+        <rect x="510" y="292" width="60" height="56" fill="#141018" stroke="#FF5A5A" stroke-width="2"/>
+        <text x="540" y="318" font-size="10.5" fill="#FF5A5A" text-anchor="middle">최심부</text>
+        <text x="540" y="334" font-size="9" fill="#FF5A5A" text-anchor="middle">권한 없음</text>
+        <!-- dweller note -->
+        <text x="370" y="396" font-size="11.5" fill="#8CA0B3" text-anchor="middle" font-family="SF Mono,ui-monospace,monospace">벙커 = 메타 거점: 대기 인원 숙소 · 추모벽 · 연구 · 상점</text>
+      </g>
+    </svg>
+    <div class="cap">SKETCH v2-02 — 단독건물 3층 구조. <b>옥상(감시·생산) / 1층(방어전) / 지하 벙커(메타 거점)</b>. 최심부 문은 마지막까지 열리지 않는다.</div>
+  </div>
+
+  <ul>
+    <li><strong>카드키 권한 등급</strong> — 벙커는 구역별로 잠겨 있고, 카드키 권한을 올려 단계 해금 = 성장 트리의 서사화. <em>최심부 문 하나는 끝까지 잠겨 있다</em>(시즌 스토리의 문 — 구 화장실 떡밥 계승).</li>
+    <li><strong>물자 게이지 = 생존 타이머</strong> — 벙커의 비상물자는 <em>2인 기준 14일치</em>. 물자는 인원수로 나뉜다: 5인이면 5~6일, 10인이면 사흘이 못 간다. <strong>사람을 받을수록 시계가 빨라지는 구조</strong>라 파밍은 선택이 아니라 생존 그 자체. 회계사가 있으면 "현재 인원·소비율로 D+11까지" 정밀 표시.</li>
+    <li><strong>무기 2계열</strong> — 편의점 물품(우산·소화기·스프레이+라이터: 조용하지만 약함) vs 벙커 화기(강력하지만 시끄러움) → 소음 게이지와 직결.</li>
+  </ul>
+
+  <div class="neon-box"><div class="bt">소음 게이지 — 구 소문 게이지의 이식</div>
+  <p style="margin:0">소리는 좀비를 부른다. 총기·전자레인지·발전기 가동은 강력하지만 소음 게이지를 올리고, 게이지가 높을수록 웨이브가 커진다. 조용한 빌드(양궁·활·낚싯대·마킹)로 안전하게 갈 것인가, 시끄러운 화력으로 쓸어버리고 대가를 치를 것인가 — <strong>리스크·리워드 구조를 괴담 버전에서 그대로 이식.</strong></p></div>
+</section>
+
+<!-- ============================== -->
+<section>
+  <div class="aisle"><span class="no">05</span><h2>생존자 시스템 — 이 게임의 심장</h2><span class="sub">SURVIVOR MGMT</span></div>
+
+  <h3>3계층 구조</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>계층</th><th>사망</th><th>역할</th></tr></thead>
+    <tbody>
+      <tr><td class="k">코어 5인</td><td>불사 (쓰러지면 중상·며칠 이탈)</td><td>스토리의 주역. 단, 바리케이드 완전 붕괴 시 그 자리에서 게임 오버</td></tr>
+      <tr><td class="k">합류 생존자</td><td><span style="color:var(--danger);font-weight:700">영구 사망</span></td><td>D+n마다 셔터를 두드리는 사람들. 죽으면 추모벽의 폴라로이드로 남는다</td></tr>
+      <tr><td class="k">방출자</td><td>—</td><td>내보낸 생존자. 며칠 뒤 약탈자로 돌아오거나, 위기의 순간 은인으로 재등장(방출 당시 대우에 따라 분기)</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>생존자의 3가지 상태 — "많다고 좋은 게 아니다"</h3>
+  <ul>
+    <li><strong>전투 배치</strong> — 밤 방어 슬롯(셔터 앞·창문·옥상·지하 입구). 슬롯은 시설 업그레이드로만 늘어난다.</li>
+    <li><strong>시설 근무</strong> — 조리사→주방, 농원→텃밭, 재봉사→작업대, 교수→연구실. 근무도 슬롯 제한.</li>
+    <li><strong>휴식 대기</strong> — 벙커에서 컨디션 회복. 그러나 <em>밥은 먹는다.</em> 생존자 1명 = 전력 +1이자 식량 소모 +1.</li>
+  </ul>
+
+  <h3>결정은 주인공(플레이어)의 몫</h3>
+  <p>선택은 방출에서 시작되지 않는다 — <strong>구출의 순간부터 시작된다.</strong> 원정 중 만난 생존자의 정보 카드를 보며 "이 직업이 지금 필요한가, 이 입을 먹일 수 있는가"를 그 자리에서 판단하는 게 첫 번째 결정. 그리고 물자가 줄면 두 번째 결정이 온다 — <strong>"식량 6일치. 누군가를 내보내시겠습니까?"</strong> 스킬이 겹치는 생존자, 컨디션이 무너진 생존자, 사고를 친 생존자… 방출하면 식량 압박이 풀리지만 전체 사기가 떨어진다(변호사가 있으면 '합의 방출'로 완충). 그리고 내보낸 사람은 이야기가 되어 돌아온다.</p>
+
+  <h3>단점 시스템 — 모두에게 그림자가 있다</h3>
+  <p>합류 생존자 전원은 <strong>장점 1 + 단점 1</strong>을 가진다(코어 5인은 예외 — 단점 대신 스토리 성장 아크). 단점은 구출 정보 카드에 표시되어 <em>"이 능력에 이 단점을 감수할 것인가"</em>가 구출 판단의 핵심이 된다. 규칙:</p>
+  <ul>
+    <li><strong>숨겨진 단점</strong> — 일부는 구출 후에야 드러난다(마술사의 과장된 능력치 등). 구출은 가끔 도박이다.</li>
+    <li><strong>상쇄 콤보</strong> — 어떤 단점은 다른 생존자·시설로 관리된다(약사의 결벽 ↔ 미화원, 재봉사의 노안 ↔ 발전기 조명). 단점 관리 자체가 배치 퍼즐.</li>
+    <li><strong>극복 이벤트</strong> — 일부 단점은 스토리로 극복 가능. 극복의 날이 그 캐릭터 최고의 순간이 된다.</li>
+  </ul>
+
+  <h3>직업 조합 콤보 (도감에 "???"로 숨김)</h3>
+  <div class="grid2">
+    <div class="card"><span class="mono">소방관 + 집배원</span><h4>구조 작전</h4><p>집배원이 위치를 알고, 소방관이 뚫는다 — 생존자 구출 미션 해금</p></div>
+    <div class="card"><span class="mono">크레인 + 건축사 + 설비</span><h4>요새화 대공사</h4><p>컨테이너 외곽 방벽 구축, 방어 슬롯 대확장</p></div>
+    <div class="card"><span class="mono">조리사 + 화훼농원 + 주부</span><h4>자급자족</h4><p>생산과 소비가 균형 — 물자 게이지 감소 정지</p></div>
+    <div class="card"><span class="mono">웹툰작가 + 양궁 선수</span><h4>약점 저격</h4><p>마킹된 부위를 무소음 원거리 일격</p></div>
+    <div class="card"><span class="mono">약사 + 미생물학 교수</span><h4>치료제 연구</h4><p>감염 치료 스토리 라인 가속 — 외과의사의 수술 성공률도 상승</p></div>
+    <div class="card"><span class="mono">방송인 + 집배원</span><h4>생존자 대수색</h4><p>합류 이벤트 발생률 대폭 상승</p></div>
+  </div>
+
+  <div class="receipt r2">
+    <div class="rhead">기획자 코멘트 · COMMENT #v2-002</div>
+    <div class="rbody">방출 시스템의 핵심은 죄책감이다.
+
+내보낸 회계사가 D+23 밤 약탈자 무리에 섞여 돌아왔을 때, 유저는 시스템이 아니라 자기 선택을 기억한다.
+
+게임이 유저를 기억하게 만들면, 유저도 게임을 기억한다.</div>
+    <div class="barcode"></div>
+    <div class="rfoot">라이브옵스 서사 설계 * POS-v2</div>
+  </div>
+</section>
+
+<!-- ============================== -->
+<section>
+  <div class="aisle"><span class="no">06</span><h2>로스터 — 코어 5 + 합류 32</h2><span class="sub">37 SURVIVORS</span></div>
+
+  <h3>코어 5인 — 그날 밤, 편의점에 있던 사람들 (불사)</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>캐릭터</th><th>사연</th><th>포지션</th></tr></thead>
+    <tbody>
+      <tr><td class="k">주인공 — 웨이팅게일</td><td>국시 합격·대학병원 최종합격 후 발령 대기 1년차. 그동안 야간 알바로 버티는 중 (실존 현상 "웨이팅게일" 기반)</td><td>밸런스+회복. 응급처치·소생. 카드키 계승자</td></tr>
+      <tr><td class="k">납품 트럭 기사</td><td>새벽 물류 배송 중 사태 발발. 트럭엔 납품 물자가 가득</td><td>기동+운반. 원정 적재량↑. 트럭 = 원정 수단</td></tr>
+      <tr><td class="k">술 깨러 온 몸짱</td><td>새벽까지 놀다 해장라면 사러 왔다 갇힘. 클럽 복장, 몸은 진심</td><td>근접 탱커. "술김의 용기": HP 낮을수록 공격력↑</td></tr>
+      <tr><td class="k">밀리터리 덕후</td><td>라면 사재기하러 왔다 갇힘. 총은 게임에서만 쏴봤지만 지식은 현역급</td><td>벙커 화기 해금·개조. 소음 리스크의 중심</td></tr>
+      <tr><td class="k">새벽 단골 설비 기사</td><td>야간 작업 후 컵라면 먹으러 오던 중년 단골</td><td>설치형. 발전기·바리케이드 용접·전기 트랩</td></tr>
+    </tbody>
+  </table></div>
+
+  <h3>합류 생존자 32인 — 능력과 그림자 (영구 사망)</h3>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>생존자</th><th>능력</th><th>단점</th></tr></thead>
+    <tbody>
+      <tr><td class="k">양궁 국가대표</td><td>무소음 원거리 최강 딜러</td><td>프로의 루틴 — 연속 배치 시 명중률 급락(로테이션 강제)</td></tr>
+      <tr><td class="k">정육점 사장</td><td>약점 절단 처형(근접 정밀)</td><td>고기 없인 못 살아 — 육류 배급 없으면 사기 급락</td></tr>
+      <tr><td class="k">소방관</td><td>도끼 돌파·구출 전문</td><td>몸이 먼저 나감 — 구출 상황이 뜨면 명령 무시</td></tr>
+      <tr><td class="k">신입 순경</td><td>합법 화기 + 무전 정보</td><td>원칙주의 — 불법 화기 반대, 밀덕과 상시 불화</td></tr>
+      <tr><td class="k">종군 사진기자</td><td>플래시 광역 섬광 스턴</td><td>특종 욕심 — 위기의 순간에 셔터부터(행동 지연)</td></tr>
+      <tr><td class="k">성악가</td><td>아리아 광역 유인 궁극기</td><td>목 관리 — 물 소모↑, 감기 시 궁극기 봉인</td></tr>
+      <tr><td class="k">마술사</td><td>연막 전원 후퇴(전멸 방지)</td><td>허세 — <em>정보 카드 능력치가 과장됨(숨겨진 단점)</em></td></tr>
+      <tr><td class="k">프로 바둑기사</td><td>호드 수읽기·최적 배치 추천</td><td>장고(長考) — 밤 방어 중 실시간 재배치 불가</td></tr>
+      <tr><td class="k">드론 고등학생</td><td>정찰 + 원격 소리 유인</td><td>미성년자 — 전투 배치 불가, 위험 노출 시 전체 사기 타격</td></tr>
+      <tr><td class="k">집배원</td><td>생존자 위치 파악(구출 미션 생성)</td><td>책임감 과다 — 구출 실패 시 며칠간 자책 무력화</td></tr>
+      <tr><td class="k">웹툰작가</td><td>약점 마킹 디버프</td><td>마감 체질 — 완전 야행성, 낮 원정 배치 불가</td></tr>
+      <tr><td class="k">인터넷 방송인</td><td>방송 = 리크루팅 엔진 + 시청자 제보</td><td>조회수 중독 — 위험할수록 방송 켬(호드 날 소음 자동 상승)</td></tr>
+      <tr><td class="k">회계사</td><td>물자 정밀 예측·도난 적발</td><td>융통성 제로 — 온정적 배급 이벤트마다 갈등</td></tr>
+      <tr><td class="k">폐지 리어카 할머니</td><td>호드 조기 감지 + 대용량 운반</td><td>고령 — 전투 불가·저속. 잃으면 전체 사기 최악</td></tr>
+      <tr><td class="k">급식 조리사</td><td>음식 버프 제조</td><td>손이 큼 — 버프 요리 식량 소모 1.5배 (↔주부 상쇄)</td></tr>
+      <tr><td class="k">화훼농원 사장</td><td>옥상 텃밭 = 식량 자급</td><td>물 욕심 — 텃밭이 식수와 경쟁</td></tr>
+      <tr><td class="k">수선집 재봉사</td><td>방어구 제작·수리</td><td>노안 — 밤 작업 불가 (↔발전기 조명 상쇄)</td></tr>
+      <tr><td class="k">약사</td><td>소모품(의약품) 제조</td><td>결벽 — 위생도 낮으면 작업 거부 (↔미화원 상쇄)</td></tr>
+      <tr><td class="k">살림 만렙 주부</td><td>소모율 감소·창고 정리</td><td>잔소리 — 몸짱·밀덕과 불화 (↔선생님 중재)</td></tr>
+      <tr><td class="k">새벽 환경미화원</td><td>광역 수집·청소</td><td>새벽형 인간 — 밤 방어 후반 졸음</td></tr>
+      <tr><td class="k">본사 슈퍼바이저</td><td>재고·상점 시스템</td><td>매뉴얼 인간 — 결정마다 "규정상…" 반대</td></tr>
+      <tr><td class="k">외과의사</td><td>물린 자의 절단 수술 = 사망 뒤집기</td><td>그 손은 소중하다 — 전투 배치 시 수술 성공률↓, 수술마다 의료 물자 대량 소모</td></tr>
+      <tr><td class="k">변호사</td><td>협상·합의 방출</td><td>"그건 제 업무가 아닙니다" — 시설 노동 거부</td></tr>
+      <tr><td class="k">건축구조기술사</td><td>방어 설계·붕괴 예측</td><td>완벽주의 — 모든 건설 기간 1.5배</td></tr>
+      <tr><td class="k">미생물학 교수</td><td>감염 연구·백신 스토리</td><td>연구 몰두 — 끼니 거름 + 위험한 실험 사고</td></tr>
+      <tr><td class="k">장의사</td><td>무소음 처형·시체 위장 잠행</td><td>불길한 존재 — 주변 사기↓. 혼자 배치하면 최강, 섞으면 독</td></tr>
+      <tr><td class="k">초등학교 선생님</td><td>대기 인원 사기 관리·중재</td><td>아이 우선 — 미성년자가 위험하면 임무 이탈</td></tr>
+      <tr><td class="k">열쇠 수리공</td><td>잠긴 문·금고 개방</td><td>직업적 호기심 — 벙커 최심부 문을 자꾸 따려다 사고(스토리 연동)</td></tr>
+      <tr><td class="k">대리운전 기사</td><td>루트 개척·탈출 운전</td><td>야행성 운전 — 낮 운전 서투름</td></tr>
+      <tr><td class="k">크레인 기사</td><td>컨테이너 외곽 방벽 구축</td><td>연료 먹는 하마 — 가동마다 연료 대량 소모</td></tr>
+      <tr><td class="k">낚시꾼</td><td>무소음 훅 컨트롤·미끼</td><td>자기 페이스 — 낚시 중 호출 무시(긴급 투입 지연)</td></tr>
+      <tr><td class="k">수의대생</td><td>구조 동물 = 펫 시스템</td><td>동물 우선 — 식량을 몰래 동물에게(↔회계사 적발 이벤트)</td></tr>
+    </tbody>
+  </table></div>
+  <p><strong>런칭 구성 제안:</strong> 코어 5 + 합류 10~12로 시작, 나머지는 시즌 업데이트("새로운 생존자가 나타났다")로 순차 투입 — 신규 캐릭터 추가가 곧 스토리 이벤트인 라이브 서비스 구조.</p>
+</section>
+
+<!-- ============================== -->
+<section>
+  <div class="aisle"><span class="no">07</span><h2>기존 자산 이식표</h2><span class="sub">CARRY-OVER</span></div>
+  <div class="tbl-wrap"><table>
+    <thead><tr><th>괴담 버전 자산</th><th>라스트 스토어에서</th></tr></thead>
+    <tbody>
+      <tr><td class="k">소문 게이지</td><td class="g">소음 게이지</td></tr>
+      <tr><td class="k">빛의 결계</td><td>전등 빛 — 켜면 시야·사기, 대신 좀비 유인. 발전기 연료와 연동</td></tr>
+      <tr><td class="k">기억 조각(영수증)</td><td>점장의 일지 — "그는 어떻게 알고 있었나"</td></tr>
+      <tr><td class="k">편의점 물품 무기</td><td>그대로 + 벙커 화기 계열 추가</td></tr>
+      <tr><td class="k">적 디자인 규칙</td><td>그대로 — 무채색 몸+빨간 눈 좀비, "무섭지 않은 오싹함" 수위</td></tr>
+      <tr><td class="k">유니폼·팔레트·안심24</td><td>그대로 — 민트 조끼는 "우리 편의점 사람"의 표식이 된다</td></tr>
+      <tr><td class="k">아트 파이프라인</td><td>그대로 — Gemini 시트 생성→검수→도트화 검증 완료 상태</td></tr>
+      <tr><td class="k">45평 평면도</td><td>개정 — 단독건물 1F+옥상+B1 구조로 재설계 예정</td></tr>
+    </tbody>
+  </table></div>
+</section>
+
+<!-- ============================== -->
+<section>
+  <div class="aisle"><span class="no">08</span><h2>BM &amp; 시장</h2><span class="sub">BUSINESS</span></div>
+  <ul>
+    <li><strong>장르 검증</strong> — 뱀서라이크(탕탕특공대)와 생존 경영(폴아웃 셸터, 60 Seconds)은 각각 검증된 장르. 이 결합은 비어 있다.</li>
+    <li><strong>BM</strong> — 하이브리드: 보상형 광고(원정 보상 2배 = "무전기 지원 요청", 부활 = "아드레날린 주사") + 배틀패스 "생존 수당" + 코스메틱(생존자 복장·편의점 테마). <strong>생존자 획득은 가챠 없이</strong> 생존 일수·이벤트로 — 이 장르 유저의 P2W 반감 회피.</li>
+    <li><strong>수위 전략</strong> — 치비 + 무채색 좀비(빨간 눈만)로 12세 등급 유지. 고어 없는 좀비물은 광고 소재 제약도 없다. 레퍼런스: 좀비고등학교의 장수 흥행.</li>
+    <li><strong>바이럴 포인트</strong> — "D+n 생존 인증" 스크린샷, 추모벽 사연 공유, "누구를 내보냈는가" 커뮤니티 논쟁(도덕 선택은 최고의 입소문 소재).</li>
+  </ul>
+</section>
+
+<!-- ============================== -->
+<section>
+  <div class="aisle"><span class="no">09</span><h2>리스크 — 미리 답해두기</h2><span class="sub">RISKS</span></div>
+  <div class="danger-box neon-box"><div class="bt">Q1. 좀비물은 포화 아닌가?</div>
+  <p style="margin:0">좀비 <em>슈터</em>는 포화지만, "한국 편의점 + 생존자 경영 + 뱀서라이크"의 조합은 스토어에 없습니다. 좀비는 소재가 아니라 <strong>무대장치</strong> — 이 게임의 정체성은 생존자 관리에 있습니다.</p></div>
+  <div class="danger-box neon-box"><div class="bt">Q2. 낮 원정 + 밤 방어 + 경영, 너무 복잡하지 않나?</div>
+  <p style="margin:0">도입 순서로 해결합니다. D+1~3은 밤 방어만(배치 자동), D+4부터 원정 해금, D+7부터 경영 요소(배급·방출) 순차 개방. 코어 조작은 끝까지 "이동 하나"입니다.</p></div>
+  <div class="danger-box neon-box"><div class="bt">Q3. 영구 사망이 캐주얼 유저에게 가혹하지 않나?</div>
+  <p style="margin:0">안전장치 3중: 외과의사(물림 수술), 마술사(전멸 방지 후퇴), 그리고 코어 5는 불사. 잃는 아픔은 남기되, 회생 수단을 시스템 안에 캐릭터로 심어뒀습니다.</p></div>
+</section>
+
+<!-- ============================== -->
+<section>
+  <div class="aisle"><span class="no">10</span><h2>다음 단계</h2><span class="sub">NEXT</span></div>
+  <ul>
+    <li><strong>1. 캐릭터 라운드 재시작</strong> — 코어 5인부터 Gemini 시트 생성(기존 파이프라인·유니폼 규격 재사용). 트럭기사·밀덕은 류·덕규 아트 재활용 검토.</li>
+    <li><strong>2. 배경 개정</strong> — 단독건물 안심24 외관(낮/밤), 1F 방어 배치도, B1 벙커. 기존 배경 패키지 개정.</li>
+    <li><strong>3. 프로토타입</strong> — 1주차: 밤 방어(배치+웨이브+바리케이드 HP). 2주차: 낮 원정 런 + 물자 게이지. 검증 지표: "하루 더" 재접속률.</li>
+  </ul>
+  <div class="receipt r3">
+    <div class="rhead">기획자 코멘트 · COMMENT #v2-003</div>
+    <div class="rbody">괴담 버전에서 단 하나만 가져간다면 "매 판의 엔딩이 아침이다"였다.
+
+이번 버전은 그걸 더 세게 만든다.
+
+아침이 온다고 끝나는 게 아니라, 아침마다 묻는다 — 오늘은 몇 명이서 해를 보는가.</div>
+    <div class="barcode"></div>
+    <div class="rfoot">*** 오늘도 무사히 D+1 ***</div>
+  </div>
+</section>
+
+<footer>안심24: 라스트 스토어 — GAME PITCH v2.0 · 2026.07 · 괴담 버전(v1.0)을 계승하는 리부트 기획</footer>
+
+</div>

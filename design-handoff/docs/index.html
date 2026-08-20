@@ -1,0 +1,58 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>안심24 — 실행 런처</title>
+<style>
+  :root{--navy:#0A0E17;--mint:#7FE3F0;--amber:#FFC24B;--purple:#6E2B8E;--lime:#9BDE3C}
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100vh;background:radial-gradient(1200px 600px at 50% -10%,#16203a,var(--navy));
+       color:#E8EFF7;font-family:"Apple SD Gothic Neo",system-ui,sans-serif;display:flex;flex-direction:column;
+       align-items:center;justify-content:center;padding:32px}
+  .sign{background:var(--purple);border-bottom:6px solid var(--lime);padding:14px 34px;border-radius:10px;
+        font-weight:900;font-size:30px;letter-spacing:2px;box-shadow:0 0 44px rgba(110,43,142,.7)}
+  h1{font-size:17px;font-weight:700;color:#9FB2C6;margin:18px 0 26px}
+  .grid{display:grid;gap:14px;width:100%;max-width:430px}
+  a.card{display:flex;align-items:center;gap:14px;text-decoration:none;color:inherit;
+         background:rgba(18,26,43,.9);border:1px solid #2b3b55;border-radius:14px;padding:16px 18px;
+         transition:.15s;box-shadow:0 6px 18px rgba(0,0,0,.35)}
+  a.card:hover{border-color:var(--mint);transform:translateY(-2px);box-shadow:0 10px 26px rgba(127,227,240,.18)}
+  a.main{border-color:var(--amber);background:linear-gradient(180deg,rgba(255,194,75,.14),rgba(18,26,43,.9))}
+  .ico{width:44px;height:44px;flex:none;border-radius:11px;display:grid;place-items:center;font-size:22px;
+       background:#0e1626;border:1px solid #2b3b55}
+  .t{font-weight:800;font-size:16px}
+  .d{font-size:12px;color:#8CA0B3;margin-top:3px}
+  .tag{margin-left:auto;font-size:11px;font-weight:800;padding:4px 9px;border-radius:999px;
+       background:var(--amber);color:#1a1206}
+  .tag.old{background:#2b3b55;color:#9FB2C6}
+  footer{margin-top:26px;font-size:11px;color:#5a6b80;text-align:center;line-height:1.7}
+</style>
+<div class="sign">안심24</div>
+<h1>라스트 스토어 — 실행 런처</h1>
+<div class="grid">
+  <a class="card main" href="game-v4.html">
+    <div class="ico">🎮</div>
+    <div><div class="t">게임 v4 실행</div><div class="d">신규 편의점 맵 + 파문·최후의 저항</div></div>
+    <div class="tag">최신</div>
+  </a>
+  <a class="card" href="game-v3.html">
+    <div class="ico">🌙</div>
+    <div><div class="t">게임 v3</div><div class="d">구 맵 · 밤 420초·시계 이벤트</div></div>
+    <div class="tag old">이전</div>
+  </a>
+  <a class="card" href="game-v2.html">
+    <div class="ico">📦</div>
+    <div><div class="t">게임 v2</div><div class="d">원본 프로토타입</div></div>
+    <div class="tag old">보관</div>
+  </a>
+  <a class="card" href="characters.html">
+    <div class="ico">👥</div>
+    <div><div class="t">캐릭터 소개</div><div class="d">코어 5인 카드</div></div>
+  </a>
+  <a class="card" href="../assets/collision_check_v6.png">
+    <div class="ico">🧱</div>
+    <div><div class="t">충돌 데이터 확인</div><div class="d">v6 맵 벽·문·거점 오버레이</div></div>
+  </a>
+</div>
+<footer>
+  즐겨찾기: <b>file:///Users/roropapa/Project2/design-handoff/docs/index.html</b><br>
+  게임은 여기서 항상 최신 빌드로 연결됩니다.
+</footer>

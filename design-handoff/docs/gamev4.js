@@ -255,6 +255,81 @@ const SURVIVOR_POOL=[
 let joined=[], memorial=[], rescueCard=null, pendingRescue=[], escortees=[], memorialView=null;
 // ===== v4: 사기(0~100) · 소등의 밤 =====
 let morale=70, blackout=false, prevBlackout=false, moraleFx=[];
+// ===== v4: 성장 — SP·스킬트리·카드키 권한 =====
+let sp=0, skills={}, journals=0, keyLevel=1, skillSel='seoyeon';
+const TREES={
+ seoyeon:{nm:'서연',A:{nm:'응급실',nodes:[
+   {id:'s_a1',t:1,nm:'넓은 처치범위',d:'치료 반경 70→98'},
+   {id:'s_a2',t:2,nm:'아드레날린',d:'치료 중 동료 공속 +20%'},
+   {id:'s_a3',t:3,nm:'소생술',d:'다운 동료 즉시 기상(밤 2회)',need:3}]},
+  B:{nm:'야간조',nodes:[
+   {id:'s_b1',t:1,nm:'묵직한 손목',d:'빠루 대미지 +8'},
+   {id:'s_b2',t:2,nm:'부위 파괴',d:'15% 확률 2초 기절'},
+   {id:'s_b3',t:3,nm:'트리아지',d:'HP 30% 이하 좀비 즉사'}]}},
+ jina:{nm:'진아',A:{nm:'저격수',nodes:[
+   {id:'j_a1',t:1,nm:'조준 훈련',d:'사거리 +50'},
+   {id:'j_a2',t:2,nm:'관통탄',d:'좀비 2체 관통',need:2},
+   {id:'j_a3',t:3,nm:'헤드샷',d:'4발마다 대미지 3배',need:2}]},
+  B:{nm:'속사포',nodes:[
+   {id:'j_b1',t:1,nm:'가벼운 손놀림',d:'연사 +15%'},
+   {id:'j_b2',t:2,nm:'도탄',d:'처치 시 인근 50% 튕김',need:2},
+   {id:'j_b3',t:3,nm:'제압사격',d:'명중 시 이속 −30%',need:2}]}},
+ jaehyuk:{nm:'재혁',A:{nm:'진압',nodes:[
+   {id:'h_a1',t:1,nm:'넓은 스윙',d:'공격 범위 +30%'},
+   {id:'h_a2',t:2,nm:'소화 분사',d:'8초마다 넉백+슬로우'},
+   {id:'h_a3',t:3,nm:'역화',d:'넉백 충돌 추가 대미지'}]},
+  B:{nm:'돌파',nodes:[
+   {id:'h_b1',t:1,nm:'완력',d:'대미지 +10'},
+   {id:'h_b2',t:2,nm:'파고들기',d:'첫 타격 +50%'},
+   {id:'h_b3',t:3,nm:'구조 우선',d:'다운 동료 곁 대미지+40%·피해−30%'}]}},
+ sangcheol:{nm:'상철',A:{nm:'철벽',nodes:[
+   {id:'c_a1',t:1,nm:'맷집',d:'최대체력 +40'},
+   {id:'c_a2',t:2,nm:'도발',d:'거점 내 좀비가 우선 공격'},
+   {id:'c_a3',t:3,nm:'버티기',d:'치명상 시 1회 생존(밤 1회)'}]},
+  B:{nm:'물류',nodes:[
+   {id:'c_b1',t:1,nm:'알뜰함',d:'식량 드랍률 10→16%'},
+   {id:'c_b2',t:2,nm:'핸드트럭 돌진',d:'10초마다 직선 돌진'},
+   {id:'c_b3',t:3,nm:'재고 정리',d:'밤 종료 XP +30%'}]}},
+ mansu:{nm:'만수',A:{nm:'요새',nodes:[
+   {id:'m_a1',t:1,nm:'보강 용접',d:'수리량 +6/초'},
+   {id:'m_a2',t:2,nm:'가시 철조망',d:'갉는 좀비에 반사 대미지'},
+   {id:'m_a3',t:3,nm:'이중 셔터',d:'붕괴 시 1회 50% 재생성'}]},
+  B:{nm:'발명',nodes:[
+   {id:'m_b1',t:1,nm:'손재주',d:'밤 시작 시 재료 +1'},
+   {id:'m_b2',t:2,nm:'자동 터렛',d:'배치 거점에 터렛 1기',need:3},
+   {id:'m_b3',t:3,nm:'CCTV 개조',d:'원거리 첫 타 +25%',need:3}]}},
+};
+function has(id){ return !!skills[id]; }
+function nodeCost(n){ return n.t; }
+function nodeLocked(n){ return (n.need||1)>keyLevel; }
+function branchNodes(who,br){ return TREES[who][br].nodes; }
+function canBuy(who,br,idx){
+  const ns=branchNodes(who,br), n=ns[idx];
+  if(has(n.id)||nodeLocked(n))return false;
+  if(sp<nodeCost(n))return false;
+  for(let i=0;i<idx;i++) if(!has(ns[i].id)) return false;   // 선행 필요
+  return true;
+}
+function buyNode(who,br,idx){
+  if(!canBuy(who,br,idx))return false;
+  const n=branchNodes(who,br)[idx];
+  sp-=nodeCost(n); skills[n.id]=true; applySkills(); return true;
+}
+function skillCount(who){ let c=0; for(const br of ['A','B']) for(const n of TREES[who][br].nodes) if(has(n.id))c++; return c; }
+// T1 수치 노드를 실제 스탯에 반영
+function applySkills(){
+  if(player){ player.healR=CFG.HEAL_R*(has('s_a1')?1.4:1);
+    player.skillDmg=(has('s_b1')?8:0); }
+  for(const a of allies){
+    a.skillDmg=0; a.skillRng=0; a.skillCd=1; a.skillHp=0; a.skillRepair=0;
+    if(a.key==='jina'){ if(has('j_a1'))a.skillRng+=50; if(has('j_b1'))a.skillCd*=0.85; }
+    if(a.key==='jaehyuk'){ if(has('h_b1'))a.skillDmg+=10; }
+    if(a.key==='sangcheol'){ if(has('c_a1'))a.skillHp+=40; }
+    if(a.key==='mansu'){ if(has('m_a1'))a.skillRepair+=6; }
+    a.baseMaxhp=(a.baseMaxhp0||a.baseMaxhp)+a.skillHp;
+  }
+  recomputeCombos();
+}
 function addMorale(v,txt){ morale=Math.max(0,Math.min(100,morale+v));
   if(txt)moraleFx.push({txt:txt+' '+(v>0?'+':'')+v,col:v>0?'#7ED8A8':'#FF7A7A',t:2.2}); }
 function moraleTier(){ return morale>=80?'high':morale<20?'crit':morale<40?'low':'mid'; }
@@ -364,7 +439,7 @@ const BFURN=[
 // 상호작용 지점
 const BVAULT={x:1010,y:1130,r:34};        // 금고문(빨간불) — 기계실 우하단 코너
 
-function reset(){ day=1; totalKills=0; food=20; materials=8; fac={barricade:0,farm:0}; ownedItems=[]; selMember=null; totalRescued=0; joined=[]; memorial=[]; rescueCard=null; pendingRescue=[]; escortees=[]; memorialView=null; morale=70; blackout=false; prevBlackout=false; moraleFx=[]; scene='1F'; startNight(true); }
+function reset(){ day=1; totalKills=0; food=20; materials=8; fac={barricade:0,farm:0}; ownedItems=[]; selMember=null; totalRescued=0; joined=[]; memorial=[]; rescueCard=null; pendingRescue=[]; escortees=[]; memorialView=null; morale=70; blackout=false; prevBlackout=false; moraleFx=[]; sp=0; skills={}; journals=0; keyLevel=1; skillSel='seoyeon'; scene='1F'; startNight(true); }
 function startNight(fresh){
   night_t=0; kills=0; zombies=[]; gems=[]; fx=[]; spawnAcc=0;
   ripples=[]; ev333=ev444=ev555=false; noiseFxT=0; laststand=false; lsT=0; lsDone=false;
@@ -379,7 +454,7 @@ function startNight(fresh){
       {key:'jaehyuk',nm:'재혁',ranged:false,rng:30,dmg:26,cd:0.85,hp:150,spd:82},
       {key:'sangcheol',nm:'상철',ranged:false,rng:28,dmg:20,cd:0.8,hp:115,spd:76},
       {key:'mansu',nm:'만수',ranged:false,rng:30,dmg:22,cd:1.0,hp:100,spd:62},
-    ].map(a=>({...a,r:15,x:CENTER.x+(Math.random()*80-40),y:CENTER.y+(Math.random()*60),maxhp:a.hp,baseMaxhp:a.hp,
+    ].map(a=>({...a,r:15,x:CENTER.x+(Math.random()*80-40),y:CENTER.y+(Math.random()*60),maxhp:a.hp,baseMaxhp:a.hp,baseMaxhp0:a.hp,
       cdLeft:0,hitCd:0,down:0,swingT:0,swingDir:0,phase:Math.random()*6,moving:false,post:null,work:'combat',item:null}));
     for(const a of allies){ const it=ITEMS.find(i=>i.own===a.key); if(it)a.item=it.id; } // 시그니처 기본 장착
     ownedItems=[]; // 인벤(장착 안 된 여분)
@@ -390,7 +465,8 @@ function startNight(fresh){
     player.x=CENTER.x; player.y=CENTER.y+120;
     for(const a of allies){a.hp=a.maxhp; a.down=0; a.x=CENTER.x; a.y=CENTER.y;}
   }
-  recomputeCombos();
+  applySkills();
+  if(has('m_b1'))materials+=1;   // 손재주
   // 요새 콤보: 만수 배치 거점 바리케이드 강화(+40)
   const m=allies.find(a=>a.key==='mansu');
   if(m&&m.work==='combat'&&typeof m.post==='number'&&ENTRIES[m.post]){ const e=ENTRIES[m.post]; e.barr.max+=40; e.barr.hp=e.barr.max; }
@@ -401,9 +477,9 @@ window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true; const k=e.
 window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 let joy=null;
 cv.addEventListener('touchstart',e=>{const t=e.changedTouches[0];
-  if(state==='assign'||state==='morning'||state==='expedition'){const rc=cv.getBoundingClientRect();const mx=(t.clientX-rc.left)*(VW/rc.width),my=(t.clientY-rc.top)*(VH/rc.height);if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else expeditionTap(mx,my);e.preventDefault();return;}
+  if(state==='assign'||state==='morning'||state==='expedition'){const rc=cv.getBoundingClientRect();const mx=(t.clientX-rc.left)*(VW/rc.width),my=(t.clientY-rc.top)*(VH/rc.height);if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else if(state==='skill')skillTap(mx,my);else expeditionTap(mx,my);e.preventDefault();return;}
   joy={id:t.identifier,sx:t.clientX,sy:t.clientY,dx:0,dy:0};e.preventDefault();},{passive:false});
-cv.addEventListener('click',e=>{ if(state!=='assign'&&state!=='morning'&&state!=='expedition'&&state!=='memorial')return; const rc=cv.getBoundingClientRect();const mx=(e.clientX-rc.left)*(VW/rc.width),my=(e.clientY-rc.top)*(VH/rc.height);if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else expeditionTap(mx,my); });
+cv.addEventListener('click',e=>{ if(state!=='assign'&&state!=='morning'&&state!=='expedition'&&state!=='memorial'&&state!=='skill')return; const rc=cv.getBoundingClientRect();const mx=(e.clientX-rc.left)*(VW/rc.width),my=(e.clientY-rc.top)*(VH/rc.height);if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else if(state==='skill')skillTap(mx,my);else expeditionTap(mx,my); });
 cv.addEventListener('touchmove',e=>{if(!joy)return;for(const t of e.changedTouches)if(t.identifier===joy.id){joy.dx=t.clientX-joy.sx;joy.dy=t.clientY-joy.sy;}e.preventDefault();},{passive:false});
 const endT=e=>{if(joy)for(const t of e.changedTouches)if(t.identifier===joy.id)joy=null;};
 cv.addEventListener('touchend',endT);cv.addEventListener('touchcancel',endT);
@@ -506,7 +582,7 @@ function morningLayout(){
   const itemY=facY+54, cw=(w-4*6)/5;
   const chips=ITEMS.map((it,i)=>({it,x:x+i*(cw+6),y:itemY,w:cw,h:46}));
   const lightY=itemY+56;
-  return {rows,fac2,chips,next:{x,y:VH-56,w,h:46},itemY,
+  return {rows,fac2,chips,next:{x,y:VH-56,w,h:46},itemY,skillBtn:{x:VW-104,y:74,w:92,h:26},
     light:{on:{x,y:lightY,w:w/2-4,h:44}, off:{x:x+w/2+4,y:lightY,w:w/2-4,h:44}}};
 }
 function drawMorning(){
@@ -517,6 +593,17 @@ function drawMorning(){
   cx.fillStyle='#7ED8A8';cx.fillText('🍖 식량 '+food+'  (밤새 +'+(mi.foodProd||0)+' / -'+(mi.foodCons||0)+')',VW-12,24);
   cx.fillStyle='#C9B27A';cx.fillText('🔩 재료 '+materials,VW-12,44);
   if(mi.starve){cx.fillStyle='#FF5A5A';cx.fillText('⚠ 식량 바닥! 사기·체력↓',VW-12,62);}
+  // v4: 스킬 버튼 + SP·일지
+  { const L2=morningLayout(), b=L2.skillBtn;
+    cx.fillStyle=sp>0?'rgba(192,139,255,0.25)':'rgba(30,41,61,0.9)';
+    cx.strokeStyle=sp>0?'#C08BFF':'#3a4658'; cx.lineWidth=sp>0?2:1;
+    cx.fillRect(b.x,b.y,b.w,b.h); cx.strokeRect(b.x,b.y,b.w,b.h);
+    cx.textAlign='center'; cx.fillStyle=sp>0?'#C08BFF':'#8CA0B3';
+    cx.font='800 12px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText('✨ 스킬'+(sp>0?' ('+sp+')':''),b.x+b.w/2,b.y+18);
+    cx.textAlign='right'; cx.fillStyle='#8CA0B3'; cx.font='700 10px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText('📓 일지 '+journals+'/12 · 🔑 권한 '+keyLevel,VW-12,VH-66);
+  }
   // v4: 사기 게이지
   { const gx=12, gy=54, gw=150, gh=9, tier=moraleTier();
     const col=tier==='high'?'#7ED8A8':tier==='crit'?'#FF5A5A':tier==='low'?'#FFC24B':'#7FB4FF';
@@ -586,6 +673,66 @@ function drawMorning(){
   // 다음 밤
   cx.fillStyle='#FFC24B';cx.fillRect(L.next.x,L.next.y,L.next.w,L.next.h);
   cx.fillStyle='#1a1206';cx.font='900 16px "Apple SD Gothic Neo",sans-serif';cx.textAlign='center';cx.fillText('☀️ 낮 원정 출발',VW/2,L.next.y+L.next.h/2+6);
+}
+// ===== v4: 스킬 트리 화면 =====
+function skillLayout(){
+  const keys=Object.keys(TREES), n=keys.length, pad=10, w=VW-2*pad;
+  const cw=(w-(n-1)*6)/n;
+  const tabs=keys.map((k,i)=>({k,x:pad+i*(cw+6),y:78,w:cw,h:36}));
+  const colW=(w-14)/2, top=134;
+  const cells=[];
+  ['A','B'].forEach((br,bi)=>{
+    TREES[skillSel][br].nodes.forEach((nd,ni)=>{
+      cells.push({br,ni,nd,x:pad+bi*(colW+14),y:top+34+ni*84,w:colW,h:74});
+    });
+  });
+  return {tabs,cells,colW,top,pad,back:{x:pad,y:VH-58,w:w,h:46}};
+}
+function drawSkill(){
+  cx.fillStyle='rgba(6,10,18,0.98)'; cx.fillRect(0,0,VW,VH);
+  cx.textAlign='left'; cx.fillStyle='#C08BFF'; cx.font='900 20px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('스킬 트리',12,32);
+  cx.textAlign='right'; cx.fillStyle='#C08BFF'; cx.font='900 16px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('SP '+sp,VW-12,30);
+  cx.fillStyle='#8CA0B3'; cx.font='11px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('🔑 권한 '+keyLevel+' · 📓 일지 '+journals+'/12',VW-12,50);
+  cx.textAlign='left'; cx.fillStyle='#5a6b80'; cx.font='10px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('위 칸부터 순서대로 · T1=1SP T2=2SP T3=3SP · 잠금은 카드키 권한 필요',12,52);
+  const L=skillLayout();
+  for(const tb of L.tabs){ const sel=tb.k===skillSel, cnt=skillCount(tb.k);
+    cx.fillStyle=sel?'#C08BFF':'rgba(18,26,43,0.95)'; cx.strokeStyle=sel?'#fff':'#3E6E7A'; cx.lineWidth=sel?2:1;
+    cx.fillRect(tb.x,tb.y,tb.w,tb.h); cx.strokeRect(tb.x,tb.y,tb.w,tb.h);
+    cx.textAlign='center'; cx.fillStyle=sel?'#1a0d26':'#D7E3EC'; cx.font='800 13px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText(TREES[tb.k].nm,tb.x+tb.w/2,tb.y+17);
+    cx.fillStyle=sel?'#3a1d4a':'#8CA0B3'; cx.font='9px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText(cnt+'/6 습득',tb.x+tb.w/2,tb.y+30); }
+  ['A','B'].forEach((br,bi)=>{
+    const bx=L.pad+bi*(L.colW+14);
+    cx.textAlign='center'; cx.fillStyle=bi?'#FFC24B':'#7ED8A8'; cx.font='800 13px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText(TREES[skillSel][br].nm,bx+L.colW/2,L.top+18); });
+  for(const c of L.cells){
+    const owned=has(c.nd.id), lock=nodeLocked(c.nd), buy=canBuy(skillSel,c.br,c.ni);
+    cx.fillStyle=owned?'rgba(126,216,168,0.18)':lock?'rgba(30,30,40,0.9)':buy?'rgba(192,139,255,0.14)':'rgba(20,26,40,0.9)';
+    cx.strokeStyle=owned?'#7ED8A8':lock?'#3a3a48':buy?'#C08BFF':'#2b3550'; cx.lineWidth=owned||buy?2:1;
+    cx.fillRect(c.x,c.y,c.w,c.h); cx.strokeRect(c.x,c.y,c.w,c.h);
+    cx.textAlign='left';
+    cx.fillStyle=owned?'#7ED8A8':lock?'#6a6a78':'#E8EFF7'; cx.font='800 12px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText((owned?'✓ ':'')+c.nd.nm,c.x+9,c.y+19);
+    cx.fillStyle=lock?'#55555f':'#8CA0B3'; cx.font='10px "Apple SD Gothic Neo",sans-serif';
+    const words=c.nd.d, max=Math.floor((c.w-18)/5.6);
+    cx.fillText(words.length>max?words.slice(0,max)+'…':words,c.x+9,c.y+37);
+    cx.fillStyle=lock?'#7a5a3a':owned?'#5a7a68':'#C9B27A'; cx.font='700 10px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText(lock?('🔒 권한 '+(c.nd.need)+' 필요'):owned?'습득 완료':('T'+c.nd.t+' · '+nodeCost(c.nd)+' SP'),c.x+9,c.y+58);
+  }
+  cx.fillStyle='#7FE3F0'; cx.fillRect(L.back.x,L.back.y,L.back.w,L.back.h);
+  cx.fillStyle='#08131a'; cx.font='900 16px "Apple SD Gothic Neo",sans-serif'; cx.textAlign='center';
+  cx.fillText('아침으로 돌아가기',VW/2,L.back.y+29);
+}
+function skillTap(lx,ly){
+  const L=skillLayout();
+  if(lx>L.back.x&&lx<L.back.x+L.back.w&&ly>L.back.y&&ly<L.back.y+L.back.h){ state='morning'; return; }
+  for(const tb of L.tabs) if(lx>tb.x&&lx<tb.x+tb.w&&ly>tb.y&&ly<tb.y+tb.h){ skillSel=tb.k; return; }
+  for(const c of L.cells) if(lx>c.x&&lx<c.x+c.w&&ly>c.y&&ly<c.y+c.h){ buyNode(skillSel,c.br,c.ni); return; }
 }
 // ===== 낮 원정 화면 =====
 const RINGCOL={near:'#7ED8A8',mid:'#FFC24B',far:'#FF6E6E'};
@@ -658,7 +805,7 @@ function endExpedition(){
       work:'combat',item:null,joinDay:day,mortal:true,memo:e.memo});
     totalRescued++;
   }
-  if(escortees.length){ fx.push({type:'alert',txt:escortees.map(e=>e.nm).join('·')+' 합류!',t:2.6}); addMorale(5*escortees.length,'사기'); }
+  if(escortees.length){ fx.push({type:'alert',txt:escortees.map(e=>e.nm).join('·')+' 합류!',t:2.6}); addMorale(5*escortees.length,'사기'); sp+=escortees.length; }
   escortees=[]; rescueCard=null;
   startNight(false); state='play';
 }
@@ -717,6 +864,8 @@ function morningTap(lx,ly){
     for(const b of r.work){ if(lx>b.x&&lx<b.x+b.w&&ly>b.y&&ly<b.y+b.h){ r.m.who.work=['combat','facility','rest'][b.k]; recomputeCombos(); return; } }
     if(lx>r.sel.x&&lx<r.sel.x+r.sel.w&&ly>r.sel.y&&ly<r.sel.y+r.sel.h){ selMember=(selMember===r.m.who)?null:r.m.who; return; }
   }
+  { const b=L.skillBtn;
+    if(lx>b.x&&lx<b.x+b.w&&ly>b.y&&ly<b.y+b.h){ state='skill'; return; } }
   { const LB=L.light;
     if(lx>LB.on.x&&lx<LB.on.x+LB.on.w&&ly>LB.on.y&&ly<LB.on.y+LB.on.h){ blackout=false; return; }
     if(lx>LB.off.x&&lx<LB.off.x+LB.off.w&&ly>LB.off.y&&ly<LB.off.y+LB.off.h){ blackout=true; return; } }
@@ -841,7 +990,7 @@ function update(dt){
   // attack
   player.cdLeft-=dt;
   if(player.cdLeft<=0){let hit=false,nd=1e9,ndir=0;
-    for(const z of zombies){const d=Math.hypot(z.x-player.x,z.y-player.y);if(d<player.atkR+z.r&&losClear(player.x,player.y,z.x,z.y)){z.hp-=Math.round((player.eDmg||player.dmg)*moraleAtk());hit=true;const a=Math.atan2(z.y-player.y,z.x-player.x);z.x+=Math.cos(a)*10;z.y+=Math.sin(a)*10;if(d<nd){nd=d;ndir=a;}}}
+    for(const z of zombies){const d=Math.hypot(z.x-player.x,z.y-player.y);if(d<player.atkR+z.r&&losClear(player.x,player.y,z.x,z.y)){z.hp-=Math.round(((player.eDmg||player.dmg)+(player.skillDmg||0))*moraleAtk());hit=true;const a=Math.atan2(z.y-player.y,z.x-player.x);z.x+=Math.cos(a)*10;z.y+=Math.sin(a)*10;if(d<nd){nd=d;ndir=a;}}}
     if(hit){player.cdLeft=player.atkCd;player.swingT=0.22;player.swingDir=ndir;player.lungeT=0.15;freeze=0.03;}else player.cdLeft=0.08;}
   // repair
   player.repairing=null;
@@ -851,7 +1000,7 @@ function update(dt){
   // 치료 (서연=간호사): 반경 내 부상 동료 체력 회복 (다운 회복 가속은 동료 루프에서)
   player.healing=false;
   for(const a of allies){ if(a.down>0)continue;
-    if(a.hp<a.maxhp && Math.hypot(a.x-player.x,a.y-player.y)<CFG.HEAL_R){
+    if(a.hp<a.maxhp && Math.hypot(a.x-player.x,a.y-player.y)<(player.healR||CFG.HEAL_R)){
       a.hp=Math.min(a.maxhp,a.hp+(CFG.HEAL_RATE+(player.healBonus||0))*(blackout?0.5:1)*dt); player.healing=true;
       if(a.healFx===undefined||a.healFx<=0){a.healFx=0.6;fx.push({type:'float',x:a.x,y:a.y-26,txt:'+치료',col:'#7ED8A8',t:0.8});}
     } }
@@ -905,13 +1054,13 @@ function update(dt){
         else if(a.cdLeft<=0&&losClear(a.x,a.y,tg.x,tg.y)){a.cdLeft=(a.eCd||a.cd);tg.hp-=(a.eDmg||a.dmg);a.swingT=0.2;a.swingDir=Math.atan2(tg.y-a.y,tg.x-a.x);}
       } else { // 좀비 없음 → 수리(배치 거점 우선, 없으면 가장 약한 곳)
         const w=(post&&post.barr.hp<post.barr.max)?post:weakest();
-        if(w&&w.barr.hp<w.barr.max){ if(goHold(a,w,w.inP.x,w.inP.y,26)<=26) w.barr.hp=Math.min(w.barr.max,w.barr.hp+(CFG.MANSU_REPAIR+(a.eRepair||0))/moraleCd()*dt); }
+        if(w&&w.barr.hp<w.barr.max){ if(goHold(a,w,w.inP.x,w.inP.y,26)<=26) w.barr.hp=Math.min(w.barr.max,w.barr.hp+(CFG.MANSU_REPAIR+(a.eRepair||0)+(a.skillRepair||0))/moraleCd()*dt); }
         else if(hold){ goHold(a,post,hold.x,hold.y,20); }
       }
       collideW(a); continue;
     }
     // 전투: 거점 배치면 거점 반경 안 좀비 능동 요격. 거점에 가장 가까운(=제일 위협적인) 좀비 우선.
-    const RNG=a.eRng||a.rng, DMG=Math.round((a.eDmg||a.dmg)*moraleAtk()), CDv=(a.eCd||a.cd)*moraleCd();
+    const RNG=(a.eRng||a.rng)+(a.skillRng||0), DMG=Math.round(((a.eDmg||a.dmg)+(a.skillDmg||0))*moraleAtk()), CDv=(a.eCd||a.cd)*(a.skillCd||1)*moraleCd();
     const ENGAGE = a.eRanged ? Math.max(240, RNG+20) : 210;  // 요격 반경(원거리는 넓게)
     const STRAY  = a.eRanged ? 70 : 175;                      // 거점서 이만큼 넘게 벗어나면 복귀(자리 지킴)
     let tg=null,td=1e9;
@@ -971,7 +1120,8 @@ function update(dt){
         } else a.down=10; }}}
     if(z.hp<=0){kills++;totalKills++;fx.push({type:'pop',x:z.x,y:z.y,t:0.3});
       const rr=Math.random();
-      const kind = rr<0.10?'food' : rr<0.18?'medkit' : 'xp';   // 좀비 드랍
+      const foodRate = has('c_b1')?0.16:0.10;
+      const kind = rr<foodRate?'food' : rr<foodRate+0.08?'medkit' : 'xp';   // 좀비 드랍
       gems.push({x:z.x,y:z.y,kind,vx:(Math.random()*40-20),vy:(Math.random()*40-20),t:0});
       zombies.splice(i,1);}
   }
@@ -1008,6 +1158,15 @@ function update(dt){
   if(night_t>=CFG.NIGHT_SEC)return morning();
 }
 function morning(){
+  // v4: SP 획득 — 생존 +1, 30킬↑ +1
+  let gain=1+(kills>=30?1:0); sp+=gain;
+  moraleFx.push({txt:'SP +'+gain,col:'#C08BFF',t:2.4});
+  // 일지 수집 — 하루 최대 1장, 40% 확률
+  if(journals<12&&Math.random()<0.4){ journals++;
+    const lv=journals>=12?4:journals>=7?3:journals>=3?2:1;
+    if(lv>keyLevel){ keyLevel=lv; fx.push({type:'alert',txt:'카드키 권한 '+lv+' 획득 — 새 구역 해금!',t:3.2}); }
+    else fx.push({type:'alert',txt:'점장의 일지 '+journals+'/12장',t:2.2});
+  }
   // v4: 밤 결과 사기 정산
   if(blackout){ addMorale(prevBlackout?-20:-10,'소등'); food=Math.max(0,Math.round(food*0.85)); }
   else if(kills>=30) addMorale(10,'격퇴');
@@ -1218,6 +1377,7 @@ function render(){
   if(state==='morning'){ drawMorning(); return; }
   if(state==='expedition'){ drawExpedition(); return; }
   if(state==='memorial'){ drawMemorial(); return; }
+  if(state==='skill'){ drawSkill(); return; }
   if(scene!=='1F'){ renderSub(); drawHUDmini(); return; }
   const vw=VW/ZOOM, vh=VH/ZOOM;
   const camX=Math.max(0,Math.min(WW-vw,player.x-vw/2)),camY=Math.max(0,Math.min(WH-vh,player.y-vh/2));
@@ -1376,7 +1536,7 @@ function drawHUDmini(){
 }
 function loop(ts){if(lastTs===undefined)lastTs=ts;let dt=(ts-lastTs)/1000;lastTs=ts;if(dt>0.05)dt=0.05;
   if(freeze>0){freeze-=dt;} else if(state==='play')update(dt); else if(state==='dawn'){dawnT+=dt;if(dawnT>=3.2)realMorning();}
-  if(state==='play'||state==='levelup'||state==='pause'||state==='dawn'||state==='assign'||state==='morning'||state==='expedition'||state==='memorial')render();
+  if(state==='play'||state==='levelup'||state==='pause'||state==='dawn'||state==='assign'||state==='morning'||state==='expedition'||state==='memorial'||state==='skill')render();
   requestAnimationFrame(loop);}
 document.getElementById('btnStart').onclick=()=>{document.getElementById('title').classList.add('hidden');reset();state='play';};
 document.getElementById('btnNext').onclick=()=>{document.getElementById('morning').classList.add('hidden');startNight(false);state='play';};

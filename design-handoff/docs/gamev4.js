@@ -8,13 +8,13 @@ const CFG={
   SPAWN_RAMP:0.005,
   SPAWN_DAY:0.15,
   Z_HP:40, Z_HP_DAY:10, Z_HP_TIME:0.05,
-  Z_SPD:40, Z_SPD_DAY:2.0,
+  Z_SPD:28, Z_SPD_DAY:1.4,
   GNAW:2.0, GNAW_DAY:0.3,                 // 바리케이드 갉는 속도
   WINDOW_CLIMB:1.8,        // 창문 넘는 시간(초)
   BARR_MAX:100,
-  P_HP:100, P_DMG:30, P_CD:0.72, P_R:66, P_SPD:150, P_REPAIR:8,
+  P_HP:100, P_DMG:30, P_CD:0.72, P_R:48, P_SPD:105, P_REPAIR:8,
   MANSU_REPAIR:14,
-  HEAL_R:100,          // 서연 치료 반경
+  HEAL_R:70,          // 서연 치료 반경
   HEAL_RATE:18,        // 주변 동료 초당 회복량
   REVIVE_BOOST:2.8,    // 서연 근처 중상(다운) 회복 가속(총 ~3.8배)
   REVIVE_HP_NEAR:0.75, // 서연 곁에서 일어나면 체력 75%(멀면 50%)
@@ -28,21 +28,21 @@ const BG=new Image(); BG.src="data:image/jpeg;base64,__BG__";
 const cv=document.getElementById('cv'), cx=cv.getContext('2d');
 cx.imageSmoothingEnabled=true;
 const VW=cv.width, VH=cv.height;
-const S=1.5, WW=1023*S, WH=1537*S;
+const S=1.0, WW=1023*S, WH=1537*S;   // v4: 실측 스케일 — 매장 폭 668px=12m → 1m≈55.7px, 사람 지름 32px≈0.57m
 const ZOOM=1.0; // 화면 확대 배율 — 유저 요청으로 1.0(원본)
 const OBJ=[
 {t:'벽',x:196,y:286,w:500,h:22},
 {t:'벽',x:196,y:286,w:22,h:150},
-{t:'벽',x:674,y:286,w:22,h:150},
+{t:'벽',x:674,y:286,w:22,h:50},
 {t:'문',x:300,y:424,w:74,h:26},
 {t:'벽',x:196,y:424,w:104,h:26},
 {t:'벽',x:374,y:424,w:322,h:26},
-{t:'문',x:676,y:330,w:26,h:86},
+{t:'문',x:670,y:336,w:48,h:74},
 {t:'벽',x:196,y:450,w:22,h:700},
 {t:'창문',x:196,y:600,w:22,h:110},
 {t:'창문',x:196,y:880,w:22,h:150},
-{t:'사물',x:222,y:700,w:58,h:150},
-{t:'사물',x:228,y:760,w:56,h:330},
+{t:'사물',x:222,y:730,w:58,h:120},
+{t:'사물',x:228,y:1000,w:56,h:120},
 {t:'사물',x:352,y:598,w:66,h:330},
 {t:'사물',x:462,y:598,w:66,h:330},
 {t:'사물',x:568,y:598,w:66,h:330},
@@ -56,14 +56,16 @@ const OBJ=[
 {t:'문',x:496,y:1150,w:190,h:26},
 {t:'창문',x:690,y:1150,w:210,h:26},
 {t:'벽',x:686,y:1150,w:236,h:26},
-{t:'벽',x:690,y:286,w:22,h:436},
+{t:'벽',x:690,y:286,w:22,h:50},
 {t:'벽',x:690,y:286,w:322,h:22},
 {t:'문',x:712,y:286,w:190,h:22},
 {t:'벽',x:990,y:286,w:22,h:436},
 {t:'벽',x:696,y:700,w:310,h:22},
-{t:'사물',x:840,y:330,w:120,h:300},
-{t:'벙커입구',x:800,y:600,w:130,h:100},
-{t:'사다리',x:950,y:296,w:36,h:86}
+{t:'사물',x:722,y:430,w:110,h:250},
+{t:'벙커입구',x:850,y:560,w:120,h:100},
+{t:'사다리',x:946,y:320,w:36,h:70},
+{t:'벽',x:674,y:410,w:22,h:26},
+{t:'벽',x:690,y:410,w:22,h:312}
 ];
 for(const o of OBJ){o.x*=S;o.y*=S;o.w*=S;o.h*=S;}
 const BLOCK=OBJ.filter(o=>o.t==='벽'||o.t==='사물'||o.t==='창문');   // 벽/사물/창문 = 못 지나감
@@ -373,10 +375,10 @@ function startNight(fresh){
       face:'front',flip:false,moving:false,phase:0,dmg:CFG.P_DMG,atkCd:CFG.P_CD,atkR:CFG.P_R,cdLeft:0,
       swingT:0,swingDir:0,lungeT:0,painT:0,hurtCd:0,xp:0,lvl:1,need:6,repairing:null,pickR:60,downT:0,away:false,rx:0,ry:0,ladCd:0};
     allies=[
-      {key:'jina',nm:'진아',ranged:true,rng:230,dmg:14,cd:0.5,hp:80,spd:100},
-      {key:'jaehyuk',nm:'재혁',ranged:false,rng:30,dmg:26,cd:0.85,hp:150,spd:118},
-      {key:'sangcheol',nm:'상철',ranged:false,rng:28,dmg:20,cd:0.8,hp:115,spd:108},
-      {key:'mansu',nm:'만수',ranged:false,rng:30,dmg:22,cd:1.0,hp:100,spd:88},
+      {key:'jina',nm:'진아',ranged:true,rng:230,dmg:14,cd:0.5,hp:80,spd:70},
+      {key:'jaehyuk',nm:'재혁',ranged:false,rng:30,dmg:26,cd:0.85,hp:150,spd:82},
+      {key:'sangcheol',nm:'상철',ranged:false,rng:28,dmg:20,cd:0.8,hp:115,spd:76},
+      {key:'mansu',nm:'만수',ranged:false,rng:30,dmg:22,cd:1.0,hp:100,spd:62},
     ].map(a=>({...a,r:15,x:CENTER.x+(Math.random()*80-40),y:CENTER.y+(Math.random()*60),maxhp:a.hp,baseMaxhp:a.hp,
       cdLeft:0,hitCd:0,down:0,swingT:0,swingDir:0,phase:Math.random()*6,moving:false,post:null,work:'combat',item:null}));
     for(const a of allies){ const it=ITEMS.find(i=>i.own===a.key); if(it)a.item=it.id; } // 시그니처 기본 장착
@@ -1258,8 +1260,8 @@ function render(){
     else if(f.type==='float'){cx.globalAlpha=Math.min(1,f.t/0.9);cx.fillStyle=f.col||'#7ED8A8';cx.font='700 12px sans-serif';cx.textAlign='center';cx.fillText(f.txt,f.x,f.y-(0.9-f.t)*20);cx.globalAlpha=1;}}
   // 동료
   for(const a of allies){if(a.work&&a.work!=='combat')continue;const img=SPR[a.key];if(!(img.complete&&img.naturalWidth))continue;
-    if(a.down>0){drawChar(img,a.x,a.y,50,{gray:true,alpha:.55});cx.fillStyle='#FF5A5A';cx.font='900 10px sans-serif';cx.textAlign='center';cx.fillText('중상 '+Math.ceil(a.down),a.x,a.y-32);continue;}
-    const hop=a.moving?-Math.abs(Math.sin(a.phase))*4:0; drawChar(img,a.x,a.y,54,{hop});
+    if(a.down>0){drawChar(img,a.x,a.y,40,{gray:true,alpha:.55});cx.fillStyle='#FF5A5A';cx.font='900 10px sans-serif';cx.textAlign='center';cx.fillText('중상 '+Math.ceil(a.down),a.x,a.y-32);continue;}
+    const hop=a.moving?-Math.abs(Math.sin(a.phase))*4:0; drawChar(img,a.x,a.y,42,{hop});
     if(a.swingT>0){cx.strokeStyle='rgba(255,194,75,.8)';cx.lineWidth=4;cx.beginPath();cx.arc(a.x,a.y,24,a.swingDir-.9,a.swingDir+.9);cx.stroke();}
     cx.font='700 10px sans-serif';cx.fillStyle=a.post==='roof'?'#C08BFF':'#8CA0B3';cx.textAlign='center';cx.fillText(a.nm+(a.post==='roof'?' 🔫옥상':''),a.x,a.y-32);
     cx.fillStyle='#20293D';cx.fillRect(a.x-13,a.y-28,26,3);cx.fillStyle='#7ED8A8';cx.fillRect(a.x-13,a.y-28,26*Math.max(0,a.hp/a.maxhp),3);}
@@ -1271,7 +1273,7 @@ function render(){
   const img=SPR[player.face]||SPR.front;
   if(img.complete&&img.naturalWidth){let hop=player.moving?-Math.abs(Math.sin(player.phase))*5:0,ox=0,oy=0;
     if(player.lungeT>0){const k=player.lungeT/0.15;ox=Math.cos(player.swingDir)*9*k;oy=Math.sin(player.swingDir)*9*k;}
-    drawChar(img,player.x+ox,player.y+oy,62,{hop,flip:player.face==='side'&&player.flip,alpha:(player.hurtCd>0&&Math.floor(player.hurtCd*20)%2===0)?.45:1});
+    drawChar(img,player.x+ox,player.y+oy,46,{hop,flip:player.face==='side'&&player.flip,alpha:(player.hurtCd>0&&Math.floor(player.hurtCd*20)%2===0)?.45:1});
     if(player.swingT>0){const k=1-player.swingT/0.22,ang=player.swingDir-1.5+k*2.7;cx.save();cx.translate(player.x+ox,player.y+oy+hop-6);cx.rotate(ang);cx.strokeStyle='#454F66';cx.lineWidth=5;cx.lineCap='round';cx.beginPath();cx.moveTo(10,0);cx.lineTo(40,0);cx.stroke();cx.restore();}
     if(player.repairing){cx.fillStyle='#7ED8A8';cx.font='700 10px sans-serif';cx.textAlign='center';cx.fillText('수리중',player.x,player.y-32);}
     else if(player.healing){cx.fillStyle='#7ED8A8';cx.font='700 10px sans-serif';cx.textAlign='center';cx.fillText('치료중',player.x,player.y-32);}

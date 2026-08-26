@@ -2,16 +2,16 @@
 // ================= 안심24 밤 방어 v2 (v5맵 + 사장님 충돌 + 밸런스) =================
 // ----- 밸런스 조절판 (숫자만 바꾸면 난이도 조절) -----
 const CFG={
-  NIGHT_SEC:420,           // v3: 하룻밤 420초 = 03:00~06:00 (31번 시트)
-  SPAWN_BASE:2.8,          // v3 리스케일
-  SPAWN_MIN:0.5,
-  SPAWN_RAMP:0.005,
-  SPAWN_DAY:0.15,
-  Z_HP:40, Z_HP_DAY:10, Z_HP_TIME:0.05,
+  NIGHT_SEC:420,           // 하룻밤 420초 = 03:00~06:00
+  SPAWN_BASE:1.7,          // v4: 난이도 상향 (2.8→1.7, 물량 65%↑)
+  SPAWN_MIN:0.32,
+  SPAWN_RAMP:0.006,
+  SPAWN_DAY:0.12,
+  Z_HP:48, Z_HP_DAY:12, Z_HP_TIME:0.06,
   Z_SPD:28, Z_SPD_DAY:1.4,
-  GNAW:2.0, GNAW_DAY:0.3,                 // 바리케이드 갉는 속도
+  GNAW:3.4, GNAW_DAY:0.5,                 // 바리케이드 갉는 속도
   WINDOW_CLIMB:1.8,        // 창문 넘는 시간(초)
-  BARR_MAX:100,
+  BARR_MAX:85,
   P_HP:100, P_DMG:30, P_CD:0.72, P_R:48, P_SPD:105, P_REPAIR:8,
   MANSU_REPAIR:14,
   HEAL_R:70,          // 서연 치료 반경
@@ -43,9 +43,9 @@ const OBJ=[
 {t:'창문',x:196,y:880,w:22,h:150},
 {t:'사물',x:222,y:730,w:58,h:120},
 {t:'사물',x:228,y:1000,w:56,h:120},
-{t:'사물',x:352,y:598,w:66,h:330},
-{t:'사물',x:462,y:598,w:66,h:330},
-{t:'사물',x:568,y:598,w:66,h:330},
+{t:'사물',x:356,y:598,w:52,h:330},
+{t:'사물',x:468,y:598,w:52,h:330},
+{t:'사물',x:576,y:598,w:52,h:330},
 {t:'사물',x:438,y:962,w:170,h:54},
 {t:'사물',x:736,y:770,w:86,h:200},
 {t:'사물',x:908,y:770,w:34,h:190},
@@ -446,7 +446,7 @@ function startNight(fresh){
   noisePrev=fresh?0:noiseScore; noiseScore=0; if(player)player.downT=0;
   for(const e of ENTRIES){ e.barr.max=CFG.BARR_MAX+fac.barricade*20; e.barr.hp = fresh?e.barr.max:Math.min(e.barr.max, e.barr.hp+50); }
   if(fresh){
-    player={x:CENTER.x,y:CENTER.y+120,r:16,hp:CFG.P_HP,maxhp:CFG.P_HP,speed:CFG.P_SPD,
+    player={x:CENTER.x,y:CENTER.y+120,r:20,hp:CFG.P_HP,maxhp:CFG.P_HP,speed:CFG.P_SPD,
       face:'front',flip:false,moving:false,phase:0,dmg:CFG.P_DMG,atkCd:CFG.P_CD,atkR:CFG.P_R,cdLeft:0,
       swingT:0,swingDir:0,lungeT:0,painT:0,hurtCd:0,xp:0,lvl:1,need:6,repairing:null,pickR:60,downT:0,away:false,rx:0,ry:0,ladCd:0};
     allies=[
@@ -454,7 +454,7 @@ function startNight(fresh){
       {key:'jaehyuk',nm:'재혁',ranged:false,rng:30,dmg:26,cd:0.85,hp:150,spd:82},
       {key:'sangcheol',nm:'상철',ranged:false,rng:28,dmg:20,cd:0.8,hp:115,spd:76},
       {key:'mansu',nm:'만수',ranged:false,rng:30,dmg:22,cd:1.0,hp:100,spd:62},
-    ].map(a=>({...a,r:15,x:CENTER.x+(Math.random()*80-40),y:CENTER.y+(Math.random()*60),maxhp:a.hp,baseMaxhp:a.hp,baseMaxhp0:a.hp,
+    ].map(a=>({...a,r:20,x:CENTER.x+(Math.random()*80-40),y:CENTER.y+(Math.random()*60),maxhp:a.hp,baseMaxhp:a.hp,baseMaxhp0:a.hp,
       cdLeft:0,hitCd:0,down:0,swingT:0,swingDir:0,phase:Math.random()*6,moving:false,post:null,work:'combat',item:null}));
     for(const a of allies){ const it=ITEMS.find(i=>i.own===a.key); if(it)a.item=it.id; } // 시그니처 기본 장착
     ownedItems=[]; // 인벤(장착 안 된 여분)
@@ -503,7 +503,7 @@ function assignLayout(){
   const pad=10, topUI=108, x=pad, w=VW-2*pad, n=allies.length;
   const chipsY=VH-116, cw=(w-(n-1)*8)/n;
   const chips=allies.map((a,j)=>({j,x:x+j*(cw+8),y:chipsY,w:cw,h:44}));
-  const done={x,y:VH-62,w,h:50};
+  const done={x,y:VH-74,w,h:62};
   const roof={x:VW/2-98,y:78,w:196,h:26};
   const availW=w, availH=(chipsY-10)-topUI, sc=Math.min(availW/WW, availH/WH);
   const mw=WW*sc, mh=WH*sc, ox=(VW-mw)/2, oy=topUI+(availH-mh)/2;
@@ -554,7 +554,7 @@ function drawAssign(){
   if(activeCombos.length){ cx.fillStyle='#FFC24B'; cx.fillText('★콤보: '+activeCombos.map(c=>c.name+'('+c.where+')').join('  '),VW/2,L.chips[0].y-6); }
   else { cx.fillStyle='#5a6b80'; cx.fillText('같은 거점에 근접 2명=협공 · 근접+원거리=엄호 · 옥상 원거리 2명=십자포화',VW/2,L.chips[0].y-6); }
   cx.fillStyle='#7FE3F0';cx.fillRect(L.done.x,L.done.y,L.done.w,L.done.h);
-  cx.fillStyle='#08131a';cx.font='900 17px "Apple SD Gothic Neo",sans-serif';cx.textAlign='center';cx.fillText('완료 · 방어 시작',VW/2,L.done.y+L.done.h/2+6);
+  cx.fillStyle='#08131a';cx.font='900 17px "Apple SD Gothic Neo",sans-serif';cx.textAlign='center';cx.font='900 20px "Apple SD Gothic Neo",sans-serif';cx.fillText('완료 · 방어 시작',VW/2,L.done.y+L.done.h/2+7);
 }
 function assignTap(lx,ly){
   const L=assignLayout();
@@ -581,9 +581,9 @@ function morningLayout(){
   const fac2=[{k:'barricade',x,y:facY,w:w/2-4,h:44},{k:'farm',x:x+w/2+4,y:facY,w:w/2-4,h:44}];
   const itemY=facY+54, cw=(w-4*6)/5;
   const chips=ITEMS.map((it,i)=>({it,x:x+i*(cw+6),y:itemY,w:cw,h:46}));
-  const lightY=itemY+56;
-  return {rows,fac2,chips,next:{x,y:VH-56,w,h:46},itemY,skillBtn:{x:VW-104,y:74,w:92,h:26},
-    light:{on:{x,y:lightY,w:w/2-4,h:44}, off:{x:x+w/2+4,y:lightY,w:w/2-4,h:44}}};
+  const lightY=itemY+60;
+  return {rows,fac2,chips,next:{x,y:VH-72,w,h:60},itemY,skillBtn:{x:VW-124,y:70,w:112,h:38},
+    light:{on:{x,y:lightY,w:w/2-4,h:58}, off:{x:x+w/2+4,y:lightY,w:w/2-4,h:58}}};
 }
 function drawMorning(){
   cx.fillStyle='rgba(6,10,18,0.98)';cx.fillRect(0,0,VW,VH);
@@ -600,7 +600,8 @@ function drawMorning(){
     cx.fillRect(b.x,b.y,b.w,b.h); cx.strokeRect(b.x,b.y,b.w,b.h);
     cx.textAlign='center'; cx.fillStyle=sp>0?'#C08BFF':'#8CA0B3';
     cx.font='800 12px "Apple SD Gothic Neo",sans-serif';
-    cx.fillText('✨ 스킬'+(sp>0?' ('+sp+')':''),b.x+b.w/2,b.y+18);
+    cx.font='800 15px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText('✨ 스킬'+(sp>0?' ('+sp+')':''),b.x+b.w/2,b.y+25);
     cx.textAlign='right'; cx.fillStyle='#8CA0B3'; cx.font='700 10px "Apple SD Gothic Neo",sans-serif';
     cx.fillText('📓 일지 '+journals+'/12 · 🔑 권한 '+keyLevel,VW-12,VH-66);
   }
@@ -659,20 +660,20 @@ function drawMorning(){
     cx.strokeStyle=onSel?'#FFC24B':'#3a4658';cx.lineWidth=onSel?2:1;
     cx.fillRect(LB.on.x,LB.on.y,LB.on.w,LB.on.h);cx.strokeRect(LB.on.x,LB.on.y,LB.on.w,LB.on.h);
     cx.textAlign='center';cx.fillStyle=onSel?'#FFC24B':'#8CA0B3';cx.font='800 13px "Apple SD Gothic Neo",sans-serif';
-    cx.fillText('💡 점등 — 등대가 된다',LB.on.x+LB.on.w/2,LB.on.y+19);
+    cx.font='800 15px "Apple SD Gothic Neo",sans-serif';cx.fillText('💡 점등 — 등대가 된다',LB.on.x+LB.on.w/2,LB.on.y+24);
     cx.fillStyle=onSel?'#C9B27A':'#5a6b80';cx.font='9px "Apple SD Gothic Neo",sans-serif';
-    cx.fillText('웨이브 100% · 생존자 유입 · 연료 3L',LB.on.x+LB.on.w/2,LB.on.y+34);
+    cx.font='10px "Apple SD Gothic Neo",sans-serif';cx.fillText('웨이브 100% · 생존자 유입',LB.on.x+LB.on.w/2,LB.on.y+43);
     cx.fillStyle=offSel?'rgba(127,227,240,0.18)':'rgba(30,41,61,0.8)';
     cx.strokeStyle=offSel?'#7FE3F0':'#3a4658';cx.lineWidth=offSel?2:1;
     cx.fillRect(LB.off.x,LB.off.y,LB.off.w,LB.off.h);cx.strokeRect(LB.off.x,LB.off.y,LB.off.w,LB.off.h);
     cx.fillStyle=offSel?'#7FE3F0':'#8CA0B3';cx.font='800 13px "Apple SD Gothic Neo",sans-serif';
-    cx.fillText('🌑 소등의 밤 — 숨는다',LB.off.x+LB.off.w/2,LB.off.y+19);
+    cx.font='800 15px "Apple SD Gothic Neo",sans-serif';cx.fillText('🌑 소등의 밤 — 숨는다',LB.off.x+LB.off.w/2,LB.off.y+24);
     cx.fillStyle=offSel?'#7FB4FF':'#5a6b80';cx.font='9px "Apple SD Gothic Neo",sans-serif';
-    cx.fillText('웨이브 −70% · 사기'+(prevBlackout?'−20':'−10')+' · 식량 −15%',LB.off.x+LB.off.w/2,LB.off.y+34);
+    cx.font='10px "Apple SD Gothic Neo",sans-serif';cx.fillText('웨이브 −70% · 사기'+(prevBlackout?'−20':'−10'),LB.off.x+LB.off.w/2,LB.off.y+43);
   }
   // 다음 밤
   cx.fillStyle='#FFC24B';cx.fillRect(L.next.x,L.next.y,L.next.w,L.next.h);
-  cx.fillStyle='#1a1206';cx.font='900 16px "Apple SD Gothic Neo",sans-serif';cx.textAlign='center';cx.fillText('☀️ 낮 원정 출발',VW/2,L.next.y+L.next.h/2+6);
+  cx.fillStyle='#1a1206';cx.font='900 16px "Apple SD Gothic Neo",sans-serif';cx.textAlign='center';cx.font='900 20px "Apple SD Gothic Neo",sans-serif';cx.fillText('☀️ 낮 원정 출발',VW/2,L.next.y+L.next.h/2+7);
 }
 // ===== v4: 스킬 트리 화면 =====
 function skillLayout(){
@@ -683,10 +684,10 @@ function skillLayout(){
   const cells=[];
   ['A','B'].forEach((br,bi)=>{
     TREES[skillSel][br].nodes.forEach((nd,ni)=>{
-      cells.push({br,ni,nd,x:pad+bi*(colW+14),y:top+34+ni*84,w:colW,h:74});
+      cells.push({br,ni,nd,x:pad+bi*(colW+14),y:top+34+ni*96,w:colW,h:86});
     });
   });
-  return {tabs,cells,colW,top,pad,back:{x:pad,y:VH-58,w:w,h:46}};
+  return {tabs,cells,colW,top,pad,back:{x:pad,y:VH-70,w:w,h:58}};
 }
 function drawSkill(){
   cx.fillStyle='rgba(6,10,18,0.98)'; cx.fillRect(0,0,VW,VH);
@@ -726,7 +727,7 @@ function drawSkill(){
   }
   cx.fillStyle='#7FE3F0'; cx.fillRect(L.back.x,L.back.y,L.back.w,L.back.h);
   cx.fillStyle='#08131a'; cx.font='900 16px "Apple SD Gothic Neo",sans-serif'; cx.textAlign='center';
-  cx.fillText('아침으로 돌아가기',VW/2,L.back.y+29);
+  cx.font='900 18px "Apple SD Gothic Neo",sans-serif';cx.fillText('아침으로 돌아가기',VW/2,L.back.y+36);
 }
 function skillTap(lx,ly){
   const L=skillLayout();
@@ -787,8 +788,12 @@ function drawExpedition(){
   cx.fillStyle='rgba(8,12,20,0.85)';cx.fillRect(0,VH-30,VW,30);
   cx.fillStyle=expStranded?'#FF5A5A':'#cdd8e4';cx.font='700 11px "Apple SD Gothic Neo",sans-serif';cx.textAlign='center';
   cx.fillText(expStranded?'⚠ 예산 초과! 귀환 시 전리품 절반·부상':expMsg,VW/2,VH-11);
-  if(escortees.length){ cx.textAlign='left'; cx.fillStyle='#7FE3F0'; cx.font='700 11px "Apple SD Gothic Neo",sans-serif';
-    cx.fillText('🤝 호위 중: '+escortees.map(e=>e.nm).join(', '),12,VH-40); }
+  if(escortees.length){ cx.textAlign='left'; cx.fillStyle='#7FE3F0'; cx.font='700 12px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText('🤝 호위 중: '+escortees.map(e=>e.nm).join(', '),12,VH-124); }
+  { const HB=homeBtn();
+    cx.fillStyle='#7FE3F0'; roundRect(HB.x,HB.y,HB.w,HB.h,12); cx.fill();
+    cx.fillStyle='#08131a'; cx.font='900 19px "Apple SD Gothic Neo",sans-serif'; cx.textAlign='center';
+    cx.fillText('🏪 편의점으로 귀환',HB.x+HB.w/2,HB.y+36); }
   if(rescueCard) drawRescueCard();
 }
 function endExpedition(){
@@ -800,7 +805,7 @@ function endExpedition(){
   for(const e of escortees){
     joined.push({key:e.key,nm:e.nm,memo:e.memo});
     allies.push({key:e.key,nm:e.nm,ranged:!!e.ranged,rng:e.rng,dmg:e.dmg,cd:e.cd,hp:e.hp,spd:e.spd,
-      r:15,x:CENTER.x+(Math.random()*80-40),y:CENTER.y+(Math.random()*60),maxhp:e.hp,baseMaxhp:e.hp,
+      r:20,x:CENTER.x+(Math.random()*80-40),y:CENTER.y+(Math.random()*60),maxhp:e.hp,baseMaxhp:e.hp,baseMaxhp0:e.hp,
       cdLeft:0,hitCd:0,down:0,swingT:0,swingDir:0,phase:Math.random()*6,moving:false,post:null,
       work:'combat',item:null,joinDay:day,mortal:true,memo:e.memo});
     totalRescued++;
@@ -810,8 +815,8 @@ function endExpedition(){
   startNight(false); state='play';
 }
 // ===== v4: 구출 정보 카드 =====
-function cardLayout(){ const w=Math.min(320,VW-40), x=(VW-w)/2, h=290, y=(VH-h)/2;
-  return {x,y,w,h, take:{x:x+14,y:y+h-58,w:w/2-20,h:44}, pass:{x:x+w/2+6,y:y+h-58,w:w/2-20,h:44}}; }
+function cardLayout(){ const w=Math.min(340,VW-30), x=(VW-w)/2, h=310, y=(VH-h)/2;
+  return {x,y,w,h, take:{x:x+14,y:y+h-70,w:w/2-20,h:56}, pass:{x:x+w/2+6,y:y+h-70,w:w/2-20,h:56}}; }
 function drawRescueCard(){
   const c=rescueCard, L=cardLayout();
   cx.fillStyle='rgba(4,7,14,0.72)'; cx.fillRect(0,0,VW,VH);
@@ -833,10 +838,10 @@ function drawRescueCard(){
   cx.fillText('🍖 식량 소모 +2/일 · 데려가면 오늘 밤부터',bx,L.y+212);
   cx.fillStyle='#7ED8A8'; roundRect(L.take.x,L.take.y,L.take.w,L.take.h,9); cx.fill();
   cx.fillStyle='#08131a'; cx.font='900 15px "Apple SD Gothic Neo",sans-serif'; cx.textAlign='center';
-  cx.fillText('데려간다',L.take.x+L.take.w/2,L.take.y+28);
+  cx.font='900 17px "Apple SD Gothic Neo",sans-serif';cx.fillText('데려간다',L.take.x+L.take.w/2,L.take.y+35);
   cx.fillStyle='rgba(30,41,61,0.95)'; cx.strokeStyle='#3E6E7A'; cx.lineWidth=1;
   roundRect(L.pass.x,L.pass.y,L.pass.w,L.pass.h,9); cx.fill(); cx.stroke();
-  cx.fillStyle='#9fb0c4'; cx.fillText('지나친다',L.pass.x+L.pass.w/2,L.pass.y+28);
+  cx.fillStyle='#9fb0c4'; cx.fillText('지나친다',L.pass.x+L.pass.w/2,L.pass.y+35);
 }
 function cardTap(lx,ly){
   const L=cardLayout(), c=rescueCard;
@@ -847,10 +852,13 @@ function cardTap(lx,ly){
     expMsg='누군가 있던 흔적만 남아 있다.'; rescueCard=null; return;
   }
 }
+function homeBtn(){ return {x:VW/2-110,y:VH-116,w:220,h:56}; }
 function expeditionTap(lx,ly){
   if(rescueCard){ cardTap(lx,ly); return; }
-  if(Math.hypot(lx-EXP_BASE.x,ly-EXP_BASE.y)<24){ endExpedition(); return; }
-  for(const n of expNodes){ if(Math.hypot(lx-n.x,ly-n.y)<20){
+  const HB=homeBtn();
+  if(lx>HB.x&&lx<HB.x+HB.w&&ly>HB.y&&ly<HB.y+HB.h){ endExpedition(); return; }   // v4: 큰 귀환 버튼
+  if(Math.hypot(lx-EXP_BASE.x,ly-EXP_BASE.y)<52){ endExpedition(); return; }     // 판정 24→52
+  for(const n of expNodes){ if(Math.hypot(lx-n.x,ly-n.y)<40){                    // 노드 20→40
     const cost=Math.hypot(n.x-expPos.x,n.y-expPos.y)*0.09;
     expBudget-=cost; expPos={x:n.x,y:n.y};
     if(!n.searched){ n.searched=true; expResolve(n); }
@@ -873,15 +881,22 @@ function morningTap(lx,ly){
   for(const c of L.chips){ if(lx>c.x&&lx<c.x+c.w&&ly>c.y&&ly<c.y+c.h){ if(selMember)equipItem(morningMembers().find(m=>m.who===selMember),c.it.id); return; } }
 }
 
+let spawnRR=0;
 function spawnZombie(){
-  // 상/좌/하 가장자리에서만 스폰 (우측은 건물이 맵 끝에 붙어 통로가 없음)
-  const e=Math.floor(Math.random()*3); let x,y;
-  if(e===0){x=Math.random()*WW;y=8;} else if(e===1){x=8;y=Math.random()*WH;} else {x=Math.random()*WW;y=WH-8;}
-  // 가장 가까운 출입구 배정
-  let best=ENTRIES[0],bd=1e9;
-  for(const en of ENTRIES){const d=Math.hypot(en.cx-x,en.cy-y); if(d<bd){bd=d;best=en;}}
+  // v4 수정: 거점을 라운드로빈으로 균등 배정 → 좌상단 편중 해소
+  const best=ENTRIES[spawnRR++%ENTRIES.length];
+  // 그 거점에 가까운 맵 가장자리에서 스폰
+  let x,y;
+  const cxr=best.cx, cyr=best.cy;
+  const dTop=cyr, dBot=WH-cyr, dLeft=cxr, dRight=WW-cxr;
+  const m=Math.min(dTop,dBot,dLeft,dRight);
+  const jit=()=>(Math.random()*300-150);
+  if(m===dTop){x=Math.max(20,Math.min(WW-20,cxr+jit()));y=8;}
+  else if(m===dBot){x=Math.max(20,Math.min(WW-20,cxr+jit()));y=WH-8;}
+  else if(m===dLeft){x=8;y=Math.max(20,Math.min(WH-20,cyr+jit()));}
+  else {x=WW-8;y=Math.max(20,Math.min(WH-20,cyr+jit()));}
   const hp=CFG.Z_HP+day*CFG.Z_HP_DAY+night_t*CFG.Z_HP_TIME;
-  zombies.push({x,y,r:12,hp,maxhp:hp,speed:(CFG.Z_SPD+Math.random()*12+day*CFG.Z_SPD_DAY)*(ev555?1.3:1),
+  zombies.push({x,y,r:15,hp,maxhp:hp,speed:(CFG.Z_SPD+Math.random()*12+day*CFG.Z_SPD_DAY)*(ev555?1.3:1),
     entry:best,inside:false,climb:0,hitCd:0,bob:Math.random()*6});
 }
 // ===== v3: 변종 '러닝크루(러너)' — 창문 직행, 낮은 HP, 빠름 =====
@@ -892,7 +907,7 @@ function spawnRunner(){
   for(const en of ENTRIES){ if(!en.isWin)continue; const d=Math.hypot(en.cx-x,en.cy-y); if(d<bd){bd=d;best=en;} }
   if(!best){ bd=1e9; for(const en of ENTRIES){const d=Math.hypot(en.cx-x,en.cy-y); if(d<bd){bd=d;best=en;}} }
   const hp=(CFG.Z_HP+day*CFG.Z_HP_DAY+night_t*CFG.Z_HP_TIME)*0.6;
-  zombies.push({x,y,r:10,hp,maxhp:hp,speed:(ev555?110*1.3:110),kind:'runner',climbNeed:0.9,
+  zombies.push({x,y,r:13,hp,maxhp:hp,speed:(ev555?110*1.3:110),kind:'runner',climbNeed:0.9,
     entry:best,inside:false,climb:0,hitCd:0,bob:Math.random()*6});
 }
 // 파문: 소음 발생 → 링 확산(300px/s), 닿은 좀비가 발원지로 (31번 §4)
@@ -1203,12 +1218,12 @@ function drawMemorial(){
     cx.fillStyle='#8CA0B3'; cx.font='12px "Apple SD Gothic Neo",sans-serif';
     cx.fillText('서연: "…잘 자요."',VW/2,VH-98);
   }
-  cx.fillStyle='#7FE3F0'; roundRect(VW/2-90,VH-72,180,44,10); cx.fill();
+  cx.fillStyle='#7FE3F0'; roundRect(VW/2-105,VH-80,210,56,12); cx.fill();
   cx.fillStyle='#08131a'; cx.font='900 15px "Apple SD Gothic Neo",sans-serif';
-  cx.fillText('아침으로',VW/2,VH-44);
+  cx.font='900 18px "Apple SD Gothic Neo",sans-serif';cx.fillText('아침으로',VW/2,VH-44);
 }
 function memorialTap(lx,ly){
-  if(lx>VW/2-90&&lx<VW/2+90&&ly>VH-72&&ly<VH-28){ if(memorialView&&!memorialView.seen){memorialView.seen=true;addMorale(5,'추모');} memorialView=null; state='morning'; }
+  if(lx>VW/2-105&&lx<VW/2+105&&ly>VH-80&&ly<VH-24){ if(memorialView&&!memorialView.seen){memorialView.seen=true;addMorale(5,'추모');} memorialView=null; state='morning'; }
 }
 function realMorning(){
   day++;
@@ -1420,8 +1435,8 @@ function render(){
     else if(f.type==='float'){cx.globalAlpha=Math.min(1,f.t/0.9);cx.fillStyle=f.col||'#7ED8A8';cx.font='700 12px sans-serif';cx.textAlign='center';cx.fillText(f.txt,f.x,f.y-(0.9-f.t)*20);cx.globalAlpha=1;}}
   // 동료
   for(const a of allies){if(a.work&&a.work!=='combat')continue;const img=SPR[a.key];if(!(img.complete&&img.naturalWidth))continue;
-    if(a.down>0){drawChar(img,a.x,a.y,40,{gray:true,alpha:.55});cx.fillStyle='#FF5A5A';cx.font='900 10px sans-serif';cx.textAlign='center';cx.fillText('중상 '+Math.ceil(a.down),a.x,a.y-32);continue;}
-    const hop=a.moving?-Math.abs(Math.sin(a.phase))*4:0; drawChar(img,a.x,a.y,42,{hop});
+    if(a.down>0){drawChar(img,a.x,a.y,52,{gray:true,alpha:.55});cx.fillStyle='#FF5A5A';cx.font='900 10px sans-serif';cx.textAlign='center';cx.fillText('중상 '+Math.ceil(a.down),a.x,a.y-32);continue;}
+    const hop=a.moving?-Math.abs(Math.sin(a.phase))*4:0; drawChar(img,a.x,a.y,56,{hop});
     if(a.swingT>0){cx.strokeStyle='rgba(255,194,75,.8)';cx.lineWidth=4;cx.beginPath();cx.arc(a.x,a.y,24,a.swingDir-.9,a.swingDir+.9);cx.stroke();}
     cx.font='700 10px sans-serif';cx.fillStyle=a.post==='roof'?'#C08BFF':'#8CA0B3';cx.textAlign='center';cx.fillText(a.nm+(a.post==='roof'?' 🔫옥상':''),a.x,a.y-32);
     cx.fillStyle='#20293D';cx.fillRect(a.x-13,a.y-28,26,3);cx.fillStyle='#7ED8A8';cx.fillRect(a.x-13,a.y-28,26*Math.max(0,a.hp/a.maxhp),3);}
@@ -1433,7 +1448,7 @@ function render(){
   const img=SPR[player.face]||SPR.front;
   if(img.complete&&img.naturalWidth){let hop=player.moving?-Math.abs(Math.sin(player.phase))*5:0,ox=0,oy=0;
     if(player.lungeT>0){const k=player.lungeT/0.15;ox=Math.cos(player.swingDir)*9*k;oy=Math.sin(player.swingDir)*9*k;}
-    drawChar(img,player.x+ox,player.y+oy,46,{hop,flip:player.face==='side'&&player.flip,alpha:(player.hurtCd>0&&Math.floor(player.hurtCd*20)%2===0)?.45:1});
+    drawChar(img,player.x+ox,player.y+oy,62,{hop,flip:player.face==='side'&&player.flip,alpha:(player.hurtCd>0&&Math.floor(player.hurtCd*20)%2===0)?.45:1});
     if(player.swingT>0){const k=1-player.swingT/0.22,ang=player.swingDir-1.5+k*2.7;cx.save();cx.translate(player.x+ox,player.y+oy+hop-6);cx.rotate(ang);cx.strokeStyle='#454F66';cx.lineWidth=5;cx.lineCap='round';cx.beginPath();cx.moveTo(10,0);cx.lineTo(40,0);cx.stroke();cx.restore();}
     if(player.repairing){cx.fillStyle='#7ED8A8';cx.font='700 10px sans-serif';cx.textAlign='center';cx.fillText('수리중',player.x,player.y-32);}
     else if(player.healing){cx.fillStyle='#7ED8A8';cx.font='700 10px sans-serif';cx.textAlign='center';cx.fillText('치료중',player.x,player.y-32);}

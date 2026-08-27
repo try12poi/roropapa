@@ -257,6 +257,23 @@ let joined=[], memorial=[], rescueCard=null, pendingRescue=[], escortees=[], mem
 let morale=70, blackout=false, prevBlackout=false, moraleFx=[];
 // ===== v4: 성장 — SP·스킬트리·카드키 권한 =====
 let sp=0, skills={}, journals=0, keyLevel=1, skillSel='seoyeon';
+const JOURNALS=[
+{n:1,place:'카운터 아래',title:'시작은 궁상',body:'폐기 또 세 박스. 아까워서 지하에 중고 냉장고를 들였다. 본사에서 알면 한 소리 하겠지만, 버리는 밥이 쌓이는 게 더 이상한 일 아닌가.'},
+{n:2,place:'창가 이트인 바 밑',title:'새벽의 단골들',body:'새벽 손님은 정해져 있다. 컵라면 양반(늘 창가), 라면 사재기 아가씨, 물류 기사 양반, 가끔 술 깨러 오는 덩치. 얼굴 보면 마음이 놓인다. 등대지기 심정이 이런 건가.'},
+{n:3,place:'옥상 안테나 함',title:'이상한 주파수',body:'새벽 세 시마다 잡음 섞인 방송이 잡힌다. 본사 비상 채널이라던 그 주파수다. 연수원에서 웃어넘겼던 얘기가 자꾸 생각난다.'},
+{n:4,place:'벙커 저장고 선반',title:'안심 프로젝트',body:'연수원 마지막 날, 회장님이 관리인 후보들만 남으라 했다. \"편의점은 등대다. 불이 꺼지면 안 되는 날이 온다.\" 그때 받은 열쇠가 이 카드키다. 다들 미쳤다고 하겠지.'},
+{n:5,place:'벙커 기계실 공구함',title:'혼자 하는 공사',body:'업자를 부를 수 없어 삼 년째 혼자 판다. 허리는 진작에 나갔다. 파스를 폐기 처리된 것만 골라 붙이는 게 요즘 낙이다.'},
+{n:6,place:'벙커 무기고 케이지',title:'쓸 일이 없기를',body:'목록대로 들여놨다. 만지기도 싫다. 이 방 문은 제일 두꺼운 걸로 달았다. 쓸 일이 없기를. 열 사람이 나 아니기를.'},
+{n:7,place:'벙커 공용거실 게시판 뒤',title:'창업주의 편지 (사본)',body:'\"관리인에게. 그날이 오면 당신은 도망칠 자격이 있다. 그러나 남는 쪽을 택했다면 — 불을 끄지 마라. 불빛은 사람을 부르고, 사람이 모이면 아침이 온다.\"'},
+{n:8,place:'옥상 물탱크 옆',title:'전조',body:'들개들이 낮에 안 보인다. 밤에만, 그늘만 골라 다닌다. 빛을 피하는 게 아니라 그림자를 따라다니는 것 같다. 오늘 본사 채널이 두 번 울렸다.'},
+{n:9,place:'벙커 침실 머리맡',title:'아무도 믿지 않았다',body:'아내한테 벙커를 보여줬다. 한참 말이 없다가, 친정에 가 있겠다고 했다. 미친 사람 취급은 견디겠는데 밥상이 조용한 건 못 견디겠다. 그래도 판다. 내가 맞으면 다 사는 거고, 내가 틀리면 나만 바보인 거니까.'},
+{n:10,place:'벙커 최심부 문 앞',title:'잇는 문',body:'사람들은 저 문을 금고인 줄 알겠지. 저건 여는 문이 아니라 잇는 문이다. 등대는 혼자가 아니다.'},
+{n:11,place:'매장 창고 선반',title:'마지막 발주 (D-3)',body:'발주를 평소의 세 배로 넣었다. 본사 담당이 실수냐고 전화했길래 실수 맞다고 했다. 물류 기사 양반이 고생하겠다. 미안하지만 — 그 트럭이 방주가 될 거다.'},
+{n:12,place:'최심부 개방 시 자동 재생 (음성+텍스트)',title:'다음 지킴이에게',body:'카드키를 쥔 사람에게. 이걸 읽는다면 나는 실패했고, 동시에 성공한 거다. 등대는 네 것이다. > 지켜라. 사람을 받아라. 밥을 나눠라. 그러다 때가 되면 — 떠나라. 남쪽 바다에도, 하늘 항구에도 등대는 있다. > 폐기는 버리는 게 아니야. 아직 안 상했거든. 사람도 그렇다. > — 안심24 달안점 지킴이, 강대식.'}
+];
+let journalView=null, journalIdx=0;
+// ===== v4: 문 두드리는 소리 (E1) =====
+let knock=null, knockDone=false;   // {entry, t, opened, openT}
 // ===== v4: 실내 전투(하이브리드 원정) =====
 const IN_W=760, IN_H=1080;   // 소형 실내 맵
 let indoor=null;             // {node, walls, boxes, zeds, witch, loot, timeLeft}
@@ -274,16 +291,30 @@ function makeIndoor(node){
     walls.push({x:60,y,w:gap,h:34});
     walls.push({x:gap+200,y,w:IN_W-gap-260,h:34});
   }
+  // v4 수정: 벽·선반과 겹치지 않는 자리에만 배치 (재시도)
+  const clearSpot=(rad)=>{
+    for(let tries=0;tries<80;tries++){
+      const x=70+Math.random()*(IN_W-140), y=140+Math.random()*(IN_H-300);
+      let ok=true;
+      for(const w of walls){
+        const nx=Math.max(w.x,Math.min(w.x+w.w,x)), ny=Math.max(w.y,Math.min(w.y+w.h,y));
+        if(Math.hypot(x-nx,y-ny)<rad+26){ ok=false; break; }
+      }
+      if(ok&&Math.hypot(x-IN_W/2,y-(IN_H-70))>90) return {x,y};
+    }
+    return {x:IN_W/2,y:IN_H/2};
+  };
   const boxes=[], nb=2+Math.floor(Math.random()*3);
-  for(let i=0;i<nb;i++) boxes.push({x:70+Math.random()*(IN_W-180),y:120+Math.random()*(IN_H-260),r:20,got:false});
+  for(let i=0;i<nb;i++){ const s=clearSpot(20); boxes.push({x:s.x,y:s.y,r:20,got:false}); }
   const zeds=[], nz=4+Math.floor(Math.random()*5);
   for(let i=0;i<nz;i++){
-    const hp=(CFG.Z_HP+day*CFG.Z_HP_DAY)*0.9;
-    zeds.push({x:80+Math.random()*(IN_W-160),y:200+Math.random()*(IN_H-320),r:15,hp,maxhp:hp,
+    const hp=(CFG.Z_HP+day*CFG.Z_HP_DAY)*0.9, s=clearSpot(15);
+    zeds.push({x:s.x,y:s.y,r:15,hp,maxhp:hp,
       speed:CFG.Z_SPD*0.9,awake:false,hitCd:0,bob:Math.random()*6});
   }
   const wChance=ring==='far'?0.4:ring==='mid'?0.2:0;
-  const witch=Math.random()<wChance?{x:IN_W/2+Math.random()*200-100,y:IN_H-260,r:18,
+  const ws=clearSpot(18);
+  const witch=Math.random()<wChance?{x:ws.x,y:ws.y,r:18,
     hp:(CFG.Z_HP+day*CFG.Z_HP_DAY)*3,maxhp:(CFG.Z_HP+day*CFG.Z_HP_DAY)*3,awake:false,speed:130,hitCd:0}:null;
   return {node,walls,boxes,zeds,witch,mul,loot:{food:0,mat:0},entered:false,exitAt:{x:IN_W/2,y:IN_H-60}};
 }
@@ -482,10 +513,10 @@ const BFURN=[
 // 상호작용 지점
 const BVAULT={x:1010,y:1130,r:34};        // 금고문(빨간불) — 기계실 우하단 코너
 
-function reset(){ day=1; totalKills=0; food=20; materials=8; fac={barricade:0,farm:0}; ownedItems=[]; selMember=null; totalRescued=0; joined=[]; memorial=[]; rescueCard=null; pendingRescue=[]; escortees=[]; memorialView=null; morale=70; blackout=false; prevBlackout=false; moraleFx=[]; indoor=null; sp=0; skills={}; journals=0; keyLevel=1; skillSel='seoyeon'; scene='1F'; startNight(true); }
+function reset(){ day=1; totalKills=0; food=20; materials=8; fac={barricade:0,farm:0}; ownedItems=[]; selMember=null; totalRescued=0; joined=[]; memorial=[]; rescueCard=null; pendingRescue=[]; escortees=[]; memorialView=null; morale=70; blackout=false; prevBlackout=false; moraleFx=[]; indoor=null; journalView=null; sp=0; skills={}; journals=0; keyLevel=1; skillSel='seoyeon'; scene='1F'; startNight(true); }
 function startNight(fresh){
   night_t=0; kills=0; zombies=[]; gems=[]; fx=[]; spawnAcc=0;
-  ripples=[]; ev333=ev444=ev555=false; noiseFxT=0; laststand=false; lsT=0; lsDone=false;
+  ripples=[]; knock=null; knockDone=false; ev333=ev444=ev555=false; noiseFxT=0; laststand=false; lsT=0; lsDone=false;
   noisePrev=fresh?0:noiseScore; noiseScore=0; if(player)player.downT=0;
   for(const e of ENTRIES){ e.barr.max=CFG.BARR_MAX+fac.barricade*20; e.barr.hp = fresh?e.barr.max:Math.min(e.barr.max, e.barr.hp+50); }
   if(fresh){
@@ -519,16 +550,30 @@ const keys={};
 window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true; const k=e.key.toLowerCase(); if(k==='p')togglePause(); if(k==='v')showDbg=!showDbg;});
 window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 let joy=null;
+function knockTap(lx,ly){
+  if(!knock||knock.opened)return false;
+  const B={x:VW/2-150,y:VH-190,w:300,h:118};
+  const OB={x:B.x+16,y:B.y+62,w:B.w/2-24,h:44}, IB={x:B.x+B.w/2+8,y:B.y+62,w:B.w/2-24,h:44};
+  if(lx>OB.x&&lx<OB.x+OB.w&&ly>OB.y&&ly<OB.y+OB.h){ knock.opened=true; knock.openT=15; return true; }
+  if(lx>IB.x&&lx<IB.x+IB.w&&ly>IB.y&&ly<IB.y+IB.h){
+    addRipple(knock.entry.cx,knock.entry.cy,320,4); addMorale(-8,'외면');
+    fx.push({type:'alert',txt:'…소리가 멎었다',t:2.6,bad:true}); knock=null; knockDone=true; return true; }
+  return false;
+}
 cv.addEventListener('touchstart',e=>{const t=e.changedTouches[0];
+  if(state==='play'&&knock){ const rc=cv.getBoundingClientRect();
+    if(knockTap((t.clientX-rc.left)*(VW/rc.width),(t.clientY-rc.top)*(VH/rc.height))){e.preventDefault();return;} }
   if(state==='indoor'){ const rc=cv.getBoundingClientRect();
     const mx=(t.clientX-rc.left)*(VW/rc.width), my=(t.clientY-rc.top)*(VH/rc.height);
     if(indoorTap(mx,my)){e.preventDefault();return;} }
-  if(state==='assign'||state==='morning'||state==='expedition'){const rc=cv.getBoundingClientRect();const mx=(t.clientX-rc.left)*(VW/rc.width),my=(t.clientY-rc.top)*(VH/rc.height);if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else if(state==='skill')skillTap(mx,my);else expeditionTap(mx,my);e.preventDefault();return;}
+  if(state==='assign'||state==='morning'||state==='expedition'){const rc=cv.getBoundingClientRect();const mx=(t.clientX-rc.left)*(VW/rc.width),my=(t.clientY-rc.top)*(VH/rc.height);if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else if(state==='skill')skillTap(mx,my);else if(state==='journal')journalTap(mx,my);else expeditionTap(mx,my);e.preventDefault();return;}
   joy={id:t.identifier,sx:t.clientX,sy:t.clientY,dx:0,dy:0};e.preventDefault();},{passive:false});
 cv.addEventListener('click',e=>{
+  if(state==='play'&&knock){ const rcK=cv.getBoundingClientRect();
+    if(knockTap((e.clientX-rcK.left)*(VW/rcK.width),(e.clientY-rcK.top)*(VH/rcK.height))) return; }
   if(state==='indoor'){ const rc0=cv.getBoundingClientRect();
     indoorTap((e.clientX-rc0.left)*(VW/rc0.width),(e.clientY-rc0.top)*(VH/rc0.height)); return; }
-  if(state!=='assign'&&state!=='morning'&&state!=='expedition'&&state!=='memorial'&&state!=='skill')return; const rc=cv.getBoundingClientRect();const mx=(e.clientX-rc.left)*(VW/rc.width),my=(e.clientY-rc.top)*(VH/rc.height);if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else if(state==='skill')skillTap(mx,my);else expeditionTap(mx,my); });
+  if(state!=='assign'&&state!=='morning'&&state!=='expedition'&&state!=='memorial'&&state!=='skill'&&state!=='journal')return; const rc=cv.getBoundingClientRect();const mx=(e.clientX-rc.left)*(VW/rc.width),my=(e.clientY-rc.top)*(VH/rc.height);if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else if(state==='skill')skillTap(mx,my);else if(state==='journal')journalTap(mx,my);else expeditionTap(mx,my); });
 cv.addEventListener('touchmove',e=>{if(!joy)return;for(const t of e.changedTouches)if(t.identifier===joy.id){joy.dx=t.clientX-joy.sx;joy.dy=t.clientY-joy.sy;}e.preventDefault();},{passive:false});
 const endT=e=>{if(joy)for(const t of e.changedTouches)if(t.identifier===joy.id)joy=null;};
 cv.addEventListener('touchend',endT);cv.addEventListener('touchcancel',endT);
@@ -723,6 +768,50 @@ function drawMorning(){
   // 다음 밤
   cx.fillStyle='#FFC24B';cx.fillRect(L.next.x,L.next.y,L.next.w,L.next.h);
   cx.fillStyle='#1a1206';cx.font='900 16px "Apple SD Gothic Neo",sans-serif';cx.textAlign='center';cx.font='900 20px "Apple SD Gothic Neo",sans-serif';cx.fillText('☀️ 낮 원정 출발',VW/2,L.next.y+L.next.h/2+7);
+}
+// ===== v4: 점장의 일지 화면 =====
+function jrnBtn(){ return {x:VW/2-100,y:VH-84,w:200,h:56}; }
+function drawJournal(){
+  const j=journalView; if(!j)return;
+  cx.fillStyle='#0C0A07'; cx.fillRect(0,0,VW,VH);
+  // 낡은 종이
+  const px=18, py=76, pw=VW-36, ph=VH-190;
+  cx.fillStyle='#E8DFC8'; cx.fillRect(px,py,pw,ph);
+  cx.strokeStyle='#C4B78F'; cx.lineWidth=2; cx.strokeRect(px,py,pw,ph);
+  for(let i=0;i<7;i++){ cx.fillStyle='rgba(160,140,100,'+(0.04+Math.random()*0.05)+')';
+    cx.fillRect(px+Math.random()*pw*0.8,py+Math.random()*ph*0.8,30+Math.random()*70,20+Math.random()*40); }
+  cx.textAlign='center'; cx.fillStyle='#8a7550'; cx.font='700 12px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('점장의 일지  '+j.n+' / 12',VW/2,54);
+  cx.fillStyle='#5a4a30'; cx.font='800 18px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText(j.title,VW/2,py+40);
+  cx.fillStyle='#9a8862'; cx.font='11px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('발견: '+j.place,VW/2,py+62);
+  cx.strokeStyle='#C4B78F'; cx.lineWidth=1;
+  cx.beginPath(); cx.moveTo(px+30,py+78); cx.lineTo(px+pw-30,py+78); cx.stroke();
+  // 본문 줄바꿈
+  cx.textAlign='left'; cx.fillStyle='#3d3222'; cx.font='15px "Apple SD Gothic Neo",sans-serif';
+  const maxW=pw-56, words=j.body.split(' ');
+  let line='', y=py+112;
+  for(const w of words){
+    const test=line?line+' '+w:w;
+    if(cx.measureText(test).width>maxW){ cx.fillText(line,px+28,y); y+=26; line=w; }
+    else line=test;
+  }
+  if(line)cx.fillText(line,px+28,y);
+  cx.textAlign='center'; cx.fillStyle='#8a7550'; cx.font='italic 13px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('— 강대식',VW/2,Math.min(py+ph-24,y+44));
+  // 권한 안내
+  if(journals===3||journals===7||journals===12){
+    cx.fillStyle='#C08BFF'; cx.font='800 13px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText('🔑 카드키 권한 '+keyLevel+' 획득 — 새 구역이 열렸다',VW/2,VH-104); }
+  const B=jrnBtn();
+  cx.fillStyle='#C9B27A'; roundRect(B.x,B.y,B.w,B.h,12); cx.fill();
+  cx.fillStyle='#2a2010'; cx.font='900 18px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('덮는다',B.x+B.w/2,B.y+36);
+}
+function journalTap(lx,ly){
+  const B=jrnBtn();
+  if(lx>B.x&&lx<B.x+B.w&&ly>B.y&&ly<B.y+B.h){ journalView=null; state='morning'; }
 }
 // ===== v4: 스킬 트리 화면 =====
 function skillLayout(){
@@ -1029,6 +1118,38 @@ function update(dt){
   if(!ev444&&night_t>=242){ev444=true;noiseFxT=1.5;shake=6;fx.push({type:'alert',txt:'4:44 — 무언가 온다',t:2.2,bad:true});const n=2+Math.min(3,Math.floor(day/2));for(let i=0;i<n;i++)spawnRunner();}
   if(!ev555&&night_t>=408){ev555=true;fx.push({type:'alert',txt:'5:55 — 최종 러시!',t:2.2,bad:true});for(const z of zombies)z.speed*=1.3;}
   if(noiseFxT>0)noiseFxT-=dt;
+  // ===== v4: 문 두드림 — D+5 이후, 밤당 1회, 확률 25% =====
+  if(!knock&&!knockDone&&!blackout&&day>=5&&night_t>90&&night_t<300&&Math.random()<0.0015){
+    const alive=ENTRIES.filter(e=>e.barr.hp>0);
+    if(alive.length&&poolAvailable().length){
+      knock={entry:alive[Math.floor(Math.random()*alive.length)],t:15,opened:false,openT:0};
+      shake=4; fx.push({type:'alert',txt:'쿵. 쿵쿵 — 사람 소리다!',t:2.6});
+    }
+  }
+  if(knock){
+    knock.t-=dt;
+    if(knock.opened){
+      knock.openT-=dt;
+      knock.entry.barr.hp=0;                       // 15초간 개방
+      if(knock.openT<=0){ knock.entry.barr.hp=Math.round(knock.entry.barr.max*0.5);
+        const pool=poolAvailable();
+        if(pool.length){ const s=pool[Math.floor(Math.random()*pool.length)];
+          joined.push({key:s.key,nm:s.nm,memo:s.memo});
+          allies.push({key:s.key,nm:s.nm,ranged:!!s.ranged,rng:s.rng,dmg:s.dmg,cd:s.cd,hp:s.hp,spd:s.spd,
+            r:20,x:knock.entry.inP.x,y:knock.entry.inP.y,maxhp:s.hp,baseMaxhp:s.hp,baseMaxhp0:s.hp,
+            cdLeft:0,hitCd:0,down:0,swingT:0,swingDir:0,phase:0,moving:false,post:null,
+            work:'combat',item:null,joinDay:day,mortal:true,memo:s.memo});
+          totalRescued++; addMorale(5,'구출'); applySkills();
+          fx.push({type:'alert',txt:s.nm+' 합류 — "고맙습니다… 정말"',t:3}); }
+        knock=null; knockDone=true; }
+    } else if(knock.t<=0){
+      // 무시 → 파문 + 사기 하락
+      addRipple(knock.entry.cx,knock.entry.cy,320,4);
+      addMorale(-8,'외면');
+      fx.push({type:'alert',txt:'…소리가 멎었다',t:2.6,bad:true});
+      knock=null; knockDone=true;
+    }
+  }
   let interval=Math.max(CFG.SPAWN_MIN, CFG.SPAWN_BASE-night_t*CFG.SPAWN_RAMP-(day-1)*CFG.SPAWN_DAY);
   const nb=Math.min(0.30,Math.floor(noisePrev/10)*0.01); interval/=(1+nb);      // 전날 소음 → 오늘 스폰 가속
   if(ev333&&night_t<107)interval*=0.5;                                          // 3:33 러시 30초
@@ -1232,8 +1353,8 @@ function morning(){
   // 일지 수집 — 하루 최대 1장, 40% 확률
   if(journals<12&&Math.random()<0.4){ journals++;
     const lv=journals>=12?4:journals>=7?3:journals>=3?2:1;
-    if(lv>keyLevel){ keyLevel=lv; fx.push({type:'alert',txt:'카드키 권한 '+lv+' 획득 — 새 구역 해금!',t:3.2}); }
-    else fx.push({type:'alert',txt:'점장의 일지 '+journals+'/12장',t:2.2});
+    if(lv>keyLevel){ keyLevel=lv; }
+    journalView=JOURNALS[journals-1];   // 새 일지 → 다음 아침에 전문 표시
   }
   // v4: 밤 결과 사기 정산
   if(blackout){ addMorale(prevBlackout?-20:-10,'소등'); food=Math.max(0,Math.round(food*0.85)); }
@@ -1276,7 +1397,7 @@ function drawMemorial(){
   cx.font='900 18px "Apple SD Gothic Neo",sans-serif';cx.fillText('아침으로',VW/2,VH-44);
 }
 function memorialTap(lx,ly){
-  if(lx>VW/2-105&&lx<VW/2+105&&ly>VH-80&&ly<VH-24){ if(memorialView&&!memorialView.seen){memorialView.seen=true;addMorale(5,'추모');} memorialView=null; state='morning'; }
+  if(lx>VW/2-105&&lx<VW/2+105&&ly>VH-80&&ly<VH-24){ if(memorialView&&!memorialView.seen){memorialView.seen=true;addMorale(5,'추모');} memorialView=null; state=journalView?'journal':'morning'; }
 }
 function realMorning(){
   day++;
@@ -1291,6 +1412,7 @@ function realMorning(){
   // v4: 전날 사망자가 있으면 추모 화면 먼저
   const fresh=memorial.filter(m=>m.to===day-1);
   if(fresh.length){ memorialView=fresh[fresh.length-1]; state='memorial'; }
+  else if(journalView){ state='journal'; }
   else state='morning';
 }
 function gameOver(t){state='over';document.getElementById('oDday').textContent='D+'+day;document.getElementById('oTitle').textContent=t;document.getElementById('oStats').textContent=day+'일 밤까지 생존 · 처치 '+totalKills+' · 구출 '+totalRescued+' · 떠나보낸 '+memorial.length+'명 · 최종 사기 '+Math.round(morale);document.getElementById('over').classList.remove('hidden');}
@@ -1574,6 +1696,7 @@ function render(){
   if(state==='memorial'){ drawMemorial(); return; }
   if(state==='skill'){ drawSkill(); return; }
   if(state==='indoor'){ drawIndoor(); return; }
+  if(state==='journal'){ drawJournal(); return; }
   if(scene!=='1F'){ renderSub(); drawHUDmini(); return; }
   const vw=VW/ZOOM, vh=VH/ZOOM;
   const camX=Math.max(0,Math.min(WW-vw,player.x-vw/2)),camY=Math.max(0,Math.min(WH-vh,player.y-vh/2));
@@ -1636,6 +1759,31 @@ function render(){
     if(player.painT>0){cx.fillStyle='#FF5A5A';cx.font='900 11px sans-serif';cx.textAlign='center';cx.fillText('아야!',player.x+16,player.y-36);}
     if(player.downT>0){cx.fillStyle='#FF5A5A';cx.font='900 11px sans-serif';cx.textAlign='center';cx.fillText('중상 '+Math.ceil(player.downT),player.x,player.y-44);}}
   cx.restore();
+  if(knock){
+    const B={x:VW/2-150,y:VH-190,w:300,h:118};
+    cx.fillStyle='rgba(8,12,20,0.92)'; roundRect(B.x,B.y,B.w,B.h,12); cx.fill();
+    cx.strokeStyle=knock.opened?'#7ED8A8':'#FFC24B'; cx.lineWidth=3;
+    roundRect(B.x,B.y,B.w,B.h,12); cx.stroke();
+    cx.textAlign='center';
+    if(knock.opened){
+      cx.fillStyle='#7ED8A8'; cx.font='900 16px "Apple SD Gothic Neo",sans-serif';
+      cx.fillText('문을 열었다 — '+knock.entry.label+' 개방 '+Math.ceil(knock.openT)+'초',VW/2,B.y+40);
+      cx.fillStyle='#8CA0B3'; cx.font='13px "Apple SD Gothic Neo",sans-serif';
+      cx.fillText('버텨라. 좀비도 들어온다.',VW/2,B.y+66);
+    } else {
+      cx.fillStyle='#FFC24B'; cx.font='900 16px "Apple SD Gothic Neo",sans-serif';
+      cx.fillText('"저기요!! 사람 있어요?! 제발—"',VW/2,B.y+30);
+      cx.fillStyle='#8CA0B3'; cx.font='12px "Apple SD Gothic Neo",sans-serif';
+      cx.fillText(knock.entry.label+' 밖 · '+Math.ceil(knock.t)+'초',VW/2,B.y+50);
+      const OB={x:B.x+16,y:B.y+62,w:B.w/2-24,h:44}, IB={x:B.x+B.w/2+8,y:B.y+62,w:B.w/2-24,h:44};
+      cx.fillStyle='#7ED8A8'; roundRect(OB.x,OB.y,OB.w,OB.h,9); cx.fill();
+      cx.fillStyle='#08131a'; cx.font='900 15px "Apple SD Gothic Neo",sans-serif';
+      cx.fillText('열어준다',OB.x+OB.w/2,OB.y+28);
+      cx.fillStyle='rgba(40,50,70,0.95)'; cx.strokeStyle='#4a5a76'; cx.lineWidth=1;
+      roundRect(IB.x,IB.y,IB.w,IB.h,9); cx.fill(); cx.stroke();
+      cx.fillStyle='#9fb0c4'; cx.fillText('무시한다',IB.x+IB.w/2,IB.y+28);
+    }
+  }
   if(laststand){cx.fillStyle='rgba(255,40,40,0.10)';cx.fillRect(0,0,VW,VH);
     cx.strokeStyle='rgba(255,60,60,0.55)';cx.lineWidth=10;cx.strokeRect(5,5,VW-10,VH-10);
     cx.fillStyle='#FF5A5A';cx.font='900 30px ui-monospace,monospace';cx.textAlign='center';cx.fillText(''+Math.ceil(Math.max(0,lsT)),VW/2,120);
@@ -1732,7 +1880,7 @@ function drawHUDmini(){
 }
 function loop(ts){if(lastTs===undefined)lastTs=ts;let dt=(ts-lastTs)/1000;lastTs=ts;if(dt>0.05)dt=0.05;
   if(freeze>0){freeze-=dt;} else if(state==='play')update(dt); else if(state==='indoor')updateIndoor(dt); else if(state==='dawn'){dawnT+=dt;if(dawnT>=3.2)realMorning();}
-  if(state==='play'||state==='levelup'||state==='pause'||state==='dawn'||state==='assign'||state==='morning'||state==='expedition'||state==='memorial'||state==='skill'||state==='indoor')render();
+  if(state==='play'||state==='levelup'||state==='pause'||state==='dawn'||state==='assign'||state==='morning'||state==='expedition'||state==='memorial'||state==='skill'||state==='indoor'||state==='journal')render();
   requestAnimationFrame(loop);}
 document.getElementById('btnStart').onclick=()=>{document.getElementById('title').classList.add('hidden');reset();state='play';};
 document.getElementById('btnNext').onclick=()=>{document.getElementById('morning').classList.add('hidden');startNight(false);state='play';};

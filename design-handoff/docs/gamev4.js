@@ -257,6 +257,49 @@ let joined=[], memorial=[], rescueCard=null, pendingRescue=[], escortees=[], mem
 let morale=70, blackout=false, prevBlackout=false, moraleFx=[];
 // ===== v4: 성장 — SP·스킬트리·카드키 권한 =====
 let sp=0, skills={}, journals=0, keyLevel=1, skillSel='seoyeon';
+// ===== v4: 실내 전투(하이브리드 원정) =====
+const IN_W=760, IN_H=1080;   // 소형 실내 맵
+let indoor=null;             // {node, walls, boxes, zeds, witch, loot, timeLeft}
+function makeIndoor(node){
+  const ring=node.ring, mul=ring==='far'?3.6:ring==='mid'?2.2:1;
+  const walls=[
+    {x:0,y:0,w:IN_W,h:24},{x:0,y:IN_H-24,w:IN_W,h:24},
+    {x:0,y:0,w:24,h:IN_H},{x:IN_W-24,y:0,w:24,h:IN_H},
+  ];
+  // 내부 선반 3~5줄 (랜덤 배치)
+  const rows=3+Math.floor(Math.random()*3);
+  for(let i=0;i<rows;i++){
+    const y=160+i*Math.floor((IN_H-320)/rows);
+    const gap=120+Math.floor(Math.random()*200);
+    walls.push({x:60,y,w:gap,h:34});
+    walls.push({x:gap+200,y,w:IN_W-gap-260,h:34});
+  }
+  const boxes=[], nb=2+Math.floor(Math.random()*3);
+  for(let i=0;i<nb;i++) boxes.push({x:70+Math.random()*(IN_W-180),y:120+Math.random()*(IN_H-260),r:20,got:false});
+  const zeds=[], nz=4+Math.floor(Math.random()*5);
+  for(let i=0;i<nz;i++){
+    const hp=(CFG.Z_HP+day*CFG.Z_HP_DAY)*0.9;
+    zeds.push({x:80+Math.random()*(IN_W-160),y:200+Math.random()*(IN_H-320),r:15,hp,maxhp:hp,
+      speed:CFG.Z_SPD*0.9,awake:false,hitCd:0,bob:Math.random()*6});
+  }
+  const wChance=ring==='far'?0.4:ring==='mid'?0.2:0;
+  const witch=Math.random()<wChance?{x:IN_W/2+Math.random()*200-100,y:IN_H-260,r:18,
+    hp:(CFG.Z_HP+day*CFG.Z_HP_DAY)*3,maxhp:(CFG.Z_HP+day*CFG.Z_HP_DAY)*3,awake:false,speed:130,hitCd:0}:null;
+  return {node,walls,boxes,zeds,witch,mul,loot:{food:0,mat:0},entered:false,exitAt:{x:IN_W/2,y:IN_H-60}};
+}
+function enterIndoor(node){
+  indoor=makeIndoor(node);
+  expBudget-=15;                       // 진입 고정 비용
+  player.ix=IN_W/2; player.iy=IN_H-70; player.face='back';
+  state='indoor';
+}
+function leaveIndoor(){
+  if(indoor){ expLoot.food+=indoor.loot.food; expLoot.mat+=indoor.loot.mat;
+    indoor.node.searched=true;
+    expMsg=indoor.node.nm+' 수색 완료 — 🍖+'+indoor.loot.food+' 🔩+'+indoor.loot.mat; }
+  indoor=null; state='expedition';
+  if(expBudget<=0)expStranded=true;
+}
 const TREES={
  seoyeon:{nm:'서연',A:{nm:'응급실',nodes:[
    {id:'s_a1',t:1,nm:'넓은 처치범위',d:'치료 반경 70→98'},
@@ -439,7 +482,7 @@ const BFURN=[
 // 상호작용 지점
 const BVAULT={x:1010,y:1130,r:34};        // 금고문(빨간불) — 기계실 우하단 코너
 
-function reset(){ day=1; totalKills=0; food=20; materials=8; fac={barricade:0,farm:0}; ownedItems=[]; selMember=null; totalRescued=0; joined=[]; memorial=[]; rescueCard=null; pendingRescue=[]; escortees=[]; memorialView=null; morale=70; blackout=false; prevBlackout=false; moraleFx=[]; sp=0; skills={}; journals=0; keyLevel=1; skillSel='seoyeon'; scene='1F'; startNight(true); }
+function reset(){ day=1; totalKills=0; food=20; materials=8; fac={barricade:0,farm:0}; ownedItems=[]; selMember=null; totalRescued=0; joined=[]; memorial=[]; rescueCard=null; pendingRescue=[]; escortees=[]; memorialView=null; morale=70; blackout=false; prevBlackout=false; moraleFx=[]; indoor=null; sp=0; skills={}; journals=0; keyLevel=1; skillSel='seoyeon'; scene='1F'; startNight(true); }
 function startNight(fresh){
   night_t=0; kills=0; zombies=[]; gems=[]; fx=[]; spawnAcc=0;
   ripples=[]; ev333=ev444=ev555=false; noiseFxT=0; laststand=false; lsT=0; lsDone=false;
@@ -477,9 +520,15 @@ window.addEventListener('keydown',e=>{keys[e.key.toLowerCase()]=true; const k=e.
 window.addEventListener('keyup',e=>{keys[e.key.toLowerCase()]=false;});
 let joy=null;
 cv.addEventListener('touchstart',e=>{const t=e.changedTouches[0];
+  if(state==='indoor'){ const rc=cv.getBoundingClientRect();
+    const mx=(t.clientX-rc.left)*(VW/rc.width), my=(t.clientY-rc.top)*(VH/rc.height);
+    if(indoorTap(mx,my)){e.preventDefault();return;} }
   if(state==='assign'||state==='morning'||state==='expedition'){const rc=cv.getBoundingClientRect();const mx=(t.clientX-rc.left)*(VW/rc.width),my=(t.clientY-rc.top)*(VH/rc.height);if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else if(state==='skill')skillTap(mx,my);else expeditionTap(mx,my);e.preventDefault();return;}
   joy={id:t.identifier,sx:t.clientX,sy:t.clientY,dx:0,dy:0};e.preventDefault();},{passive:false});
-cv.addEventListener('click',e=>{ if(state!=='assign'&&state!=='morning'&&state!=='expedition'&&state!=='memorial'&&state!=='skill')return; const rc=cv.getBoundingClientRect();const mx=(e.clientX-rc.left)*(VW/rc.width),my=(e.clientY-rc.top)*(VH/rc.height);if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else if(state==='skill')skillTap(mx,my);else expeditionTap(mx,my); });
+cv.addEventListener('click',e=>{
+  if(state==='indoor'){ const rc0=cv.getBoundingClientRect();
+    indoorTap((e.clientX-rc0.left)*(VW/rc0.width),(e.clientY-rc0.top)*(VH/rc0.height)); return; }
+  if(state!=='assign'&&state!=='morning'&&state!=='expedition'&&state!=='memorial'&&state!=='skill')return; const rc=cv.getBoundingClientRect();const mx=(e.clientX-rc.left)*(VW/rc.width),my=(e.clientY-rc.top)*(VH/rc.height);if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else if(state==='skill')skillTap(mx,my);else expeditionTap(mx,my); });
 cv.addEventListener('touchmove',e=>{if(!joy)return;for(const t of e.changedTouches)if(t.identifier===joy.id){joy.dx=t.clientX-joy.sx;joy.dy=t.clientY-joy.sy;}e.preventDefault();},{passive:false});
 const endT=e=>{if(joy)for(const t of e.changedTouches)if(t.identifier===joy.id)joy=null;};
 cv.addEventListener('touchend',endT);cv.addEventListener('touchcancel',endT);
@@ -845,11 +894,13 @@ function drawRescueCard(){
 }
 function cardTap(lx,ly){
   const L=cardLayout(), c=rescueCard;
+  const goIn=()=>{ const n=expNodes.find(z=>z.pendingEnter);
+    if(n){ n.pendingEnter=false; enterIndoor(n); } };
   if(lx>L.take.x&&lx<L.take.x+L.take.w&&ly>L.take.y&&ly<L.take.y+L.take.h){
-    escortees.push(c); expMsg=c.nm+' 합류 — 귀환까지 호위하라'; rescueCard=null; return;
+    escortees.push(c); expMsg=c.nm+' 합류 — 귀환까지 호위하라'; rescueCard=null; goIn(); return;
   }
   if(lx>L.pass.x&&lx<L.pass.x+L.pass.w&&ly>L.pass.y&&ly<L.pass.y+L.pass.h){
-    expMsg='누군가 있던 흔적만 남아 있다.'; rescueCard=null; return;
+    expMsg='누군가 있던 흔적만 남아 있다.'; rescueCard=null; goIn(); return;
   }
 }
 function homeBtn(){ return {x:VW/2-110,y:VH-116,w:220,h:56}; }
@@ -861,7 +912,9 @@ function expeditionTap(lx,ly){
   for(const n of expNodes){ if(Math.hypot(lx-n.x,ly-n.y)<40){                    // 노드 20→40
     const cost=Math.hypot(n.x-expPos.x,n.y-expPos.y)*0.09;
     expBudget-=cost; expPos={x:n.x,y:n.y};
-    if(!n.searched){ n.searched=true; expResolve(n); }
+    if(!n.searched){ expResolve(n);            // 카드·전리품 판정
+      if(!rescueCard){ enterIndoor(n); return; } // v4: 실내 전투 진입(구출 카드 없을 때)
+      n.pendingEnter=true; }
     if(expBudget<=0)expStranded=true;
     return; } }
 }
@@ -1245,6 +1298,55 @@ function gameOver(t){state='over';document.getElementById('oDday').textContent='
 function clock(){const tot=3*3600*(night_t/CFG.NIGHT_SEC);const h=3+Math.floor(tot/3600);const m=Math.floor((tot%3600)/60);return String(h).padStart(2,'0')+':'+String(m).padStart(2,'0');}
 function drawChar(img,x,y,h,o){o=o||{};const w=h*img.naturalWidth/img.naturalHeight;const hop=o.hop||0;cx.fillStyle='rgba(0,0,0,0.35)';cx.beginPath();cx.ellipse(x,y+8,h*0.20,5,0,0,6.29);cx.fill();cx.save();cx.translate(x,y+hop);if(o.flip)cx.scale(-1,1);if(o.alpha!==undefined)cx.globalAlpha=o.alpha;if(o.gray)cx.filter='grayscale(1) brightness(.7)';cx.drawImage(img,-w/2,-h+14,w,h);cx.filter='none';cx.restore();}
 
+function updateIndoor(dt){
+  const I=indoor; if(!I)return;
+  const[dx,dy]=inp(); player.moving=(dx||dy)?true:false;
+  if(player.moving){ player.phase+=dt*11;
+    player.ix+=dx*player.speed*dt; player.iy+=dy*player.speed*dt;
+    if(Math.abs(dx)>Math.abs(dy)){player.face='side';player.flip=dx>0;}else if(dy<0)player.face='back';else player.face='front';
+    player.aimA=Math.atan2(dy,dx); }
+  // 벽 충돌
+  for(let it=0;it<2;it++) for(const w of I.walls){
+    const nx=Math.max(w.x,Math.min(w.x+w.w,player.ix)), ny=Math.max(w.y,Math.min(w.y+w.h,player.iy));
+    let ddx=player.ix-nx, ddy=player.iy-ny, dd=Math.hypot(ddx,ddy);
+    if(dd<player.r){ if(dd<0.001){player.iy=w.y-player.r;} else {player.ix=nx+ddx/dd*player.r; player.iy=ny+ddy/dd*player.r;} } }
+  player.ix=Math.max(30,Math.min(IN_W-30,player.ix)); player.iy=Math.max(30,Math.min(IN_H-30,player.iy));
+  // 공격
+  if(player.hurtCd>0)player.hurtCd-=dt; if(player.swingT>0)player.swingT-=dt;
+  player.cdLeft-=dt;
+  if(player.cdLeft<=0){ let hit=false,nd=1e9,ndir=0;
+    const all=I.zeds.concat(I.witch?[I.witch]:[]);
+    for(const z of all){ if(z.hp<=0)continue;
+      const d=Math.hypot(z.x-player.ix,z.y-player.iy);
+      if(d<player.atkR+z.r){ z.hp-=Math.round(((player.eDmg||player.dmg)+(player.skillDmg||0))*moraleAtk());
+        z.awake=true; hit=true; const a=Math.atan2(z.y-player.iy,z.x-player.ix);
+        z.x+=Math.cos(a)*10; z.y+=Math.sin(a)*10; if(d<nd){nd=d;ndir=a;} } }
+    if(hit){player.cdLeft=player.atkCd;player.swingT=0.22;player.swingDir=ndir;}
+    else player.cdLeft=0.08; }
+  // 상자 줍기
+  for(const b of I.boxes){ if(b.got)continue;
+    if(Math.hypot(b.x-player.ix,b.y-player.iy)<b.r+player.r){ b.got=true;
+      const f=Math.round(2*I.mul), m=Math.round(1.8*I.mul);
+      I.loot.food+=f; I.loot.mat+=m;
+      fx.push({type:'float',x:b.x,y:b.y-20,txt:'🍖+'+f+' 🔩+'+m,col:'#7ED8A8',t:1.1}); } }
+  // 좀비 AI — 시야/근접에서 깨어남
+  const all=I.zeds.concat(I.witch?[I.witch]:[]);
+  for(let i=all.length-1;i>=0;i--){ const z=all[i]; if(z.hp<=0)continue;
+    const d=Math.hypot(z.x-player.ix,z.y-player.iy);
+    if(!z.awake && d<170) z.awake=true;
+    if(z.awake){ const a=Math.atan2(player.iy-z.y,player.ix-z.x);
+      z.x+=Math.cos(a)*z.speed*dt; z.y+=Math.sin(a)*z.speed*dt;
+      if(z.hitCd>0)z.hitCd-=dt;
+      if(d<z.r+player.r&&z.hitCd<=0){ z.hitCd=0.9;
+        if(player.hurtCd<=0){ player.hp-=(11+day*1.2); player.hurtCd=0.4; player.painT=0.5;
+          const ka=Math.atan2(player.iy-z.y,player.ix-z.x); player.ix+=Math.cos(ka)*16; player.iy+=Math.sin(ka)*16; shake=5; } } } }
+  I.zeds=I.zeds.filter(z=>z.hp>0);
+  if(I.witch&&I.witch.hp<=0)I.witch=null;
+  // 퇴장
+  if(Math.hypot(player.ix-I.exitAt.x,player.iy-I.exitAt.y)<44 && player.moving===false){ /* 버튼으로 처리 */ }
+  for(let i=fx.length-1;i>=0;i--){fx[i].t-=dt;if(fx[i].t<=0)fx.splice(i,1);}
+  if(player.hp<=0){ player.hp=1; expApplyDmg(0); leaveIndoor(); expMsg='부상 — 급히 빠져나왔다'; }
+}
 function updateSub(dt){
   const[dx,dy]=inp(); player.moving=(dx||dy)?true:false;
   if(player.moving){player.phase+=dt*11;player.rx+=dx*player.speed*dt;player.ry+=dy*player.speed*dt;
@@ -1290,6 +1392,84 @@ function updateSub(dt){
     player.rx=Math.max(30,Math.min(BUNKW.w-30,pe.x)); player.ry=Math.max(30,Math.min(BUNKW.h-30,pe.y));
     if(player.ladCd<=0 && Math.hypot(player.rx-BUNKW.up.x,player.ry-BUNKW.up.y)<40){ scene='1F'; player.ladCd=0.8; player.x=BUNK.x+BUNK.w/2; player.y=BUNK.y+BUNK.h+30; }
   }
+}
+function exitBtn(){ return {x:VW/2-100,y:VH-92,w:200,h:52}; }
+function drawIndoor(){
+  const I=indoor; if(!I)return;
+  const sc=Math.min(VW/IN_W, (VH-150)/IN_H);
+  const ox=(VW-IN_W*sc)/2, oy=70;
+  cx.fillStyle='#05070d'; cx.fillRect(0,0,VW,VH);
+  cx.save(); cx.translate(ox,oy); cx.scale(sc,sc);
+  // 바닥
+  cx.fillStyle='#1a1f2b'; cx.fillRect(0,0,IN_W,IN_H);
+  cx.fillStyle='#212836'; cx.fillRect(24,24,IN_W-48,IN_H-48);
+  // 선반·벽
+  for(const w of I.walls){ cx.fillStyle='#39424f'; cx.fillRect(w.x,w.y,w.w,w.h);
+    cx.strokeStyle='#4d5766'; cx.lineWidth=2; cx.strokeRect(w.x,w.y,w.w,w.h); }
+  // 상자
+  for(const b of I.boxes){ if(b.got)continue;
+    cx.fillStyle='#8a6a3a'; cx.fillRect(b.x-b.r,b.y-b.r,b.r*2,b.r*2);
+    cx.strokeStyle='#c9a86a'; cx.lineWidth=3; cx.strokeRect(b.x-b.r,b.y-b.r,b.r*2,b.r*2);
+    cx.fillStyle='#FFC24B'; cx.font='700 13px sans-serif'; cx.textAlign='center'; cx.fillText('📦',b.x,b.y+5); }
+  // 출구
+  cx.fillStyle='rgba(127,227,240,0.25)'; cx.fillRect(I.exitAt.x-56,I.exitAt.y-24,112,48);
+  cx.strokeStyle='#7FE3F0'; cx.lineWidth=3; cx.strokeRect(I.exitAt.x-56,I.exitAt.y-24,112,48);
+  cx.fillStyle='#7FE3F0'; cx.font='700 15px "Apple SD Gothic Neo",sans-serif'; cx.textAlign='center';
+  cx.fillText('출구',I.exitAt.x,I.exitAt.y+6);
+  // 좀비
+  const all=I.zeds.concat(I.witch?[I.witch]:[]);
+  for(const z of all){ const isW=(z===I.witch);
+    cx.fillStyle='rgba(0,0,0,0.45)'; cx.beginPath(); cx.ellipse(z.x,z.y+z.r+3,z.r,5,0,0,6.29); cx.fill();
+    cx.fillStyle=isW?'#20263a':'#161D2E'; cx.strokeStyle=z.awake?'#FF5A5A':'#2E3A57'; cx.lineWidth=z.awake?3:2;
+    cx.beginPath(); cx.arc(z.x,z.y,z.r,0,6.29); cx.fill(); cx.stroke();
+    if(z.awake||isW){ cx.fillStyle='#FF5A5A';
+      cx.beginPath(); cx.arc(z.x-5,z.y-3,2.6,0,6.29); cx.fill();
+      cx.beginPath(); cx.arc(z.x+5,z.y-3,2.6,0,6.29); cx.fill(); }
+    if(isW&&!z.awake){ cx.fillStyle='#7FB4FF'; cx.font='700 11px "Apple SD Gothic Neo",sans-serif';
+      cx.textAlign='center'; cx.fillText('흐느낌…',z.x,z.y-26); }
+    if(z.hp<z.maxhp){ cx.fillStyle='#20293D'; cx.fillRect(z.x-14,z.y-z.r-11,28,4);
+      cx.fillStyle='#FF5A5A'; cx.fillRect(z.x-14,z.y-z.r-11,28*(z.hp/z.maxhp),4); } }
+  // 플레이어
+  const img=SPR[player.face]||SPR.front;
+  if(img.complete&&img.naturalWidth) drawChar(img,player.ix,player.iy,58,{flip:player.face==='side'&&player.flip,
+    alpha:(player.hurtCd>0&&Math.floor(player.hurtCd*20)%2===0)?.45:1});
+  if(player.swingT>0){ cx.strokeStyle='rgba(255,194,75,.85)'; cx.lineWidth=5;
+    cx.beginPath(); cx.arc(player.ix,player.iy,player.atkR*0.7,player.swingDir-0.9,player.swingDir+0.9); cx.stroke(); }
+  // fx
+  for(const f of fx){ if(f.type==='float'){ cx.globalAlpha=Math.min(1,f.t/1.1); cx.fillStyle=f.col||'#7ED8A8';
+    cx.font='700 15px "Apple SD Gothic Neo",sans-serif'; cx.textAlign='center';
+    cx.fillText(f.txt,f.x,f.y-(1.1-f.t)*22); cx.globalAlpha=1; } }
+  // 손전등 부채꼴 — 시야 밖 어둡게
+  const a0=(player.aimA===undefined?-Math.PI/2:player.aimA);
+  cx.save(); cx.globalCompositeOperation='source-over';
+  cx.fillStyle='rgba(3,5,10,0.86)';
+  cx.beginPath(); cx.rect(0,0,IN_W,IN_H);
+  cx.moveTo(player.ix,player.iy);
+  cx.arc(player.ix,player.iy,300,a0-0.62,a0+0.62,false);
+  cx.closePath(); cx.fill('evenodd');
+  const g=cx.createRadialGradient(player.ix,player.iy,10,player.ix,player.iy,110);
+  g.addColorStop(0,'rgba(255,226,170,0.16)'); g.addColorStop(1,'rgba(255,226,170,0)');
+  cx.fillStyle=g; cx.beginPath(); cx.arc(player.ix,player.iy,110,0,6.29); cx.fill();
+  cx.restore();
+  cx.restore();
+  // HUD
+  cx.fillStyle='rgba(8,12,20,0.9)'; cx.fillRect(0,0,VW,64);
+  cx.textAlign='left'; cx.fillStyle='#FFC24B'; cx.font='900 16px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('🔦 '+I.node.nm+' 수색 중',12,26);
+  cx.fillStyle='#7ED8A8'; cx.font='700 12px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('획득 🍖'+I.loot.food+' 🔩'+I.loot.mat+' · 상자 '+I.boxes.filter(b=>!b.got).length+'개 남음',12,46);
+  cx.textAlign='right'; cx.fillStyle='#FF9EB5'; cx.font='700 12px ui-monospace,monospace';
+  cx.fillText('HP '+Math.max(0,Math.round(player.hp))+' · 좀비 '+(I.zeds.length+(I.witch?1:0)),VW-12,26);
+  cx.fillStyle='#FFD24B'; cx.fillText('☀️ '+Math.max(0,Math.round(expBudget)),VW-12,46);
+  const B=exitBtn();
+  cx.fillStyle='#7FE3F0'; roundRect(B.x,B.y,B.w,B.h,12); cx.fill();
+  cx.fillStyle='#08131a'; cx.font='900 18px "Apple SD Gothic Neo",sans-serif'; cx.textAlign='center';
+  cx.fillText('🚪 나가기',B.x+B.w/2,B.y+33);
+}
+function indoorTap(lx,ly){
+  const B=exitBtn();
+  if(lx>B.x&&lx<B.x+B.w&&ly>B.y&&ly<B.y+B.h){ leaveIndoor(); return true; }
+  return false;
 }
 function renderSub(){
   const SW = scene==='roof'?ROOF.w:BUNKW.w, SH = scene==='roof'?ROOF.h:BUNKW.h;
@@ -1393,6 +1573,7 @@ function render(){
   if(state==='expedition'){ drawExpedition(); return; }
   if(state==='memorial'){ drawMemorial(); return; }
   if(state==='skill'){ drawSkill(); return; }
+  if(state==='indoor'){ drawIndoor(); return; }
   if(scene!=='1F'){ renderSub(); drawHUDmini(); return; }
   const vw=VW/ZOOM, vh=VH/ZOOM;
   const camX=Math.max(0,Math.min(WW-vw,player.x-vw/2)),camY=Math.max(0,Math.min(WH-vh,player.y-vh/2));
@@ -1550,8 +1731,8 @@ function drawHUDmini(){
   drawMinimap();
 }
 function loop(ts){if(lastTs===undefined)lastTs=ts;let dt=(ts-lastTs)/1000;lastTs=ts;if(dt>0.05)dt=0.05;
-  if(freeze>0){freeze-=dt;} else if(state==='play')update(dt); else if(state==='dawn'){dawnT+=dt;if(dawnT>=3.2)realMorning();}
-  if(state==='play'||state==='levelup'||state==='pause'||state==='dawn'||state==='assign'||state==='morning'||state==='expedition'||state==='memorial'||state==='skill')render();
+  if(freeze>0){freeze-=dt;} else if(state==='play')update(dt); else if(state==='indoor')updateIndoor(dt); else if(state==='dawn'){dawnT+=dt;if(dawnT>=3.2)realMorning();}
+  if(state==='play'||state==='levelup'||state==='pause'||state==='dawn'||state==='assign'||state==='morning'||state==='expedition'||state==='memorial'||state==='skill'||state==='indoor')render();
   requestAnimationFrame(loop);}
 document.getElementById('btnStart').onclick=()=>{document.getElementById('title').classList.add('hidden');reset();state='play';};
 document.getElementById('btnNext').onclick=()=>{document.getElementById('morning').classList.add('hidden');startNight(false);state='play';};

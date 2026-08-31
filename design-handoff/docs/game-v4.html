@@ -70,41 +70,46 @@ const VW=cv.width, VH=cv.height;
 const S=1.0, WW=1023*S, WH=1537*S;   // v4: 실측 스케일 — 매장 폭 668px=12m → 1m≈55.7px, 사람 지름 32px≈0.57m
 const ZOOM=1.0; // 화면 확대 배율 — 유저 요청으로 1.0(원본)
 const OBJ=[
-{t:'벽',x:196,y:286,w:500,h:22},
-{t:'벽',x:196,y:286,w:22,h:150},
-{t:'벽',x:674,y:286,w:22,h:50},
-{t:'문',x:300,y:424,w:74,h:26},
-{t:'벽',x:196,y:424,w:104,h:26},
-{t:'벽',x:374,y:424,w:322,h:26},
-{t:'문',x:670,y:336,w:48,h:74},
-{t:'벽',x:196,y:450,w:22,h:700},
-{t:'창문',x:196,y:600,w:22,h:110},
-{t:'창문',x:196,y:880,w:22,h:150},
-{t:'사물',x:222,y:730,w:58,h:120},
-{t:'사물',x:228,y:1000,w:56,h:120},
-{t:'사물',x:356,y:598,w:52,h:330},
-{t:'사물',x:468,y:598,w:52,h:330},
-{t:'사물',x:576,y:598,w:52,h:330},
-{t:'사물',x:438,y:962,w:170,h:54},
-{t:'사물',x:736,y:770,w:86,h:200},
-{t:'사물',x:908,y:770,w:34,h:190},
-{t:'벽',x:886,y:450,w:22,h:700},
-{t:'창문',x:886,y:735,w:22,h:120},
-{t:'벽',x:196,y:1150,w:300,h:26},
-{t:'창문',x:218,y:1150,w:250,h:26},
-{t:'문',x:496,y:1150,w:190,h:26},
-{t:'창문',x:690,y:1150,w:210,h:26},
-{t:'벽',x:686,y:1150,w:236,h:26},
+{t:'벽',x:228,y:284,w:472,h:56},
+{t:'문',x:690,y:338,w:24,h:87},
+{t:'사물',x:352,y:598,w:57,h:330},
+{t:'사물',x:462,y:598,w:66,h:330},
+{t:'사물',x:568,y:598,w:66,h:330},
+{t:'사물',x:435,y:969,w:162,h:54},
 {t:'벽',x:690,y:286,w:22,h:50},
-{t:'벽',x:690,y:286,w:322,h:22},
-{t:'문',x:712,y:286,w:190,h:22},
-{t:'벽',x:990,y:286,w:22,h:436},
-{t:'벽',x:696,y:700,w:310,h:22},
-{t:'사물',x:722,y:430,w:110,h:250},
-{t:'벙커입구',x:850,y:560,w:120,h:100},
-{t:'사다리',x:946,y:320,w:36,h:70},
-{t:'벽',x:674,y:410,w:22,h:26},
-{t:'벽',x:690,y:410,w:22,h:312}
+{t:'벙커입구',x:821,y:596,w:149,h:107},
+{t:'벽',x:664,y:31,w:22,h:257},
+{t:'벽',x:687,y:26,w:18,h:139},
+{t:'벽',x:913,y:29,w:26,h:135},
+{t:'벽',x:937,y:29,w:79,h:15},
+{t:'문',x:708,y:33,w:202,h:129},
+{t:'벽',x:998,y:30,w:21,h:704},
+{t:'벽',x:192,y:1054,w:28,h:157},
+{t:'벽',x:200,y:884,w:26,h:52},
+{t:'벽',x:207,y:682,w:31,h:200},
+{t:'벽',x:220,y:309,w:22,h:284},
+{t:'벽',x:315,y:424,w:434,h:110},
+{t:'벽',x:728,y:734,w:291,h:94},
+{t:'벽',x:722,y:539,w:31,h:191},
+{t:'벽',x:887,y:1090,w:132,h:120},
+{t:'벽',x:984,y:830,w:38,h:256},
+{t:'벽',x:415,y:1083,w:33,h:131},
+{t:'벽',x:643,y:1084,w:30,h:132},
+{t:'창문',x:677,y:1097,w:210,h:111},
+{t:'창문',x:221,y:1096,w:194,h:112},
+{t:'창문',x:198,y:945,w:28,h:106},
+{t:'창문',x:209,y:598,w:36,h:81},
+{t:'문',x:244,y:430,w:72,h:108},
+{t:'문',x:450,y:1085,w:190,h:125},
+{t:'사물',x:853,y:259,w:117,h:290},
+{t:'사물',x:736,y:831,w:61,h:159},
+{t:'사물',x:231,y:742,w:53,h:188},
+{t:'사물',x:39,y:401,w:82,h:177},
+{t:'사물',x:31,y:617,w:73,h:187},
+{t:'사물',x:15,y:853,w:81,h:191},
+{t:'사물',x:874,y:1290,w:101,h:59},
+{t:'사물',x:665,y:1291,w:35,h:61},
+{t:'사다리',x:720,y:210,w:40,h:70}
 ];
 for(const o of OBJ){o.x*=S;o.y*=S;o.w*=S;o.h*=S;}
 const BLOCK=OBJ.filter(o=>o.t==='벽'||o.t==='사물'||o.t==='창문');   // 벽/사물/창문 = 못 지나감
@@ -120,7 +125,7 @@ function losClear(x1,y1,x2,y2){
 
 // 건물 내부 중심(좀비 진입방향 계산용) — 매장 바닥 대략 중심
 const IN_CENTER={x:530*S/1.0? 0:0}; // placeholder replaced below
-const CENTER={x:550*S, y:820*S};
+const CENTER={x:890*S, y:930*S};   // v4: 사장님 벽 데이터 기준 최대 여유 지점
 
 // 출입구 객체화: 정문/문/창문 + 바리케이드
 let ENTRIES=OPEN.map((o,i)=>{
@@ -130,7 +135,24 @@ let ENTRIES=OPEN.map((o,i)=>{
   const wide=Math.max(o.w,o.h)>90 && o.t==='문';
   // 내부 방향 = 중심점 향함
   let ang=Math.atan2(CENTER.y-cym, CENTER.x-cxm);
-  const inP={x:cxm+Math.cos(ang)*46, y:cym+Math.sin(ang)*46};
+  // v4: 안쪽 지점이 벽에 끼면 거리를 늘려가며 뚫린 자리 탐색
+  let inP={x:cxm+Math.cos(ang)*46, y:cym+Math.sin(ang)*46};
+  {
+    const tryP=(dist,a)=>({x:cxm+Math.cos(a)*dist, y:cym+Math.sin(a)*dist});
+    const isFree=(pt)=>{ const q={x:pt.x,y:pt.y,r:20}; collide(q);
+      return Math.hypot(q.x-pt.x,q.y-pt.y)<2; };
+    if(!isFree(inP)){
+      let found=null;
+      for(const dist of [60,76,92,110,130]){
+        for(const off of [0,0.3,-0.3,0.6,-0.6,0.9,-0.9]){
+          const cand=tryP(dist,ang+off);
+          if(isFree(cand)){ found=cand; break; }
+        }
+        if(found)break;
+      }
+      if(found)inP=found;
+    }
+  }
   const outP={x:cxm-Math.cos(ang)*40, y:cym-Math.sin(ang)*40};
   return {rect:o, cx:cxm, cy:cym, isWin, wide, inP, outP,
           barr:{hp:CFG.BARR_MAX,max:CFG.BARR_MAX},
@@ -148,7 +170,12 @@ const INNER_DOORS=[];
   const nb=[[1,0],[-1,0],[0,1],[0,-1]]; let h=0;
   while(h<q.length){const cur=q[h++],c=cur[0],r=cur[1]; for(const d of nb){const nc=c+d[0],nr=r+d[1]; if(nc<0||nr<0||nc>=COLS||nr>=ROWS||out[nr*COLS+nc])continue; if(blk(nc*C+C/2,nr*C+C/2))continue; out[nr*COLS+nc]=1;q.push([nc,nr]);}}
   const nearOut=(px,py)=>{ for(let dr=-1;dr<=1;dr++)for(let dc=-1;dc<=1;dc++){const c=Math.round((px-C/2)/C)+dc,r=Math.round((py-C/2)/C)+dr; if(c>=0&&r>=0&&c<COLS&&r<ROWS&&out[r*COLS+c])return true;} return false; };
-  for(const e of ENTRIES){ e.perimeter = nearOut(e.outP.x,e.outP.y) || nearOut(e.cx,e.cy); if(!e.perimeter)INNER_DOORS.push(e); }
+  for(const e of ENTRIES){
+    // v4: 큰 문(정문·셔터)은 무조건 거점 — 외부 연결 판정 실패해도 채택
+    const big = (e.rect.w*e.rect.h > 14000);
+    e.perimeter = big || nearOut(e.outP.x,e.outP.y) || nearOut(e.cx,e.cy);
+    if(!e.perimeter)INNER_DOORS.push(e);
+  }
 }
 ENTRIES = ENTRIES.filter(e=>e.perimeter);   // 방어 거점 = 외부 연결 출입구만
 // 정문(가장 아래) 표시

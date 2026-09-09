@@ -301,6 +301,8 @@ const JOURNALS=[
 let journalView=null, journalIdx=0;
 // ===== v4: 문 두드리는 소리 (E1) =====
 let knock=null, knockDone=false;   // {entry, t, opened, openT}
+// ===== v4: T2·T3 스킬 런타임 =====
+let turret=null, reviveLeft=0, survivedOnce=false, sprayCd=0, chargeCd=0, jinaShots=0;
 // ===== v4: 실내 전투(하이브리드 원정) =====
 const IN_W=760, IN_H=1080;   // 소형 실내 맵
 let indoor=null;             // {node, walls, boxes, zeds, witch, loot, timeLeft}
@@ -543,7 +545,8 @@ const BVAULT={x:1010,y:1130,r:34};        // 금고문(빨간불) — 기계실 
 function reset(){ day=1; totalKills=0; food=20; materials=8; fac={barricade:0,farm:0}; ownedItems=[]; selMember=null; totalRescued=0; joined=[]; memorial=[]; rescueCard=null; pendingRescue=[]; escortees=[]; memorialView=null; morale=70; blackout=false; prevBlackout=false; moraleFx=[]; indoor=null; journalView=null; sp=0; skills={}; journals=0; keyLevel=1; skillSel='seoyeon'; scene='1F'; startNight(true); }
 function startNight(fresh){
   night_t=0; kills=0; zombies=[]; gems=[]; fx=[]; spawnAcc=0;
-  ripples=[]; knock=null; knockDone=false; ev333=ev444=ev555=false; noiseFxT=0; laststand=false; lsT=0; lsDone=false;
+  ripples=[]; knock=null; knockDone=false;
+  turret=null; reviveLeft=has('s_a3')?2:0; survivedOnce=false; sprayCd=8; chargeCd=10; jinaShots=0; ev333=ev444=ev555=false; noiseFxT=0; laststand=false; lsT=0; lsDone=false;
   noisePrev=fresh?0:noiseScore; noiseScore=0; if(player)player.downT=0;
   for(const e of ENTRIES){ e.barr.max=CFG.BARR_MAX+fac.barricade*20; e.barr.hp = fresh?e.barr.max:Math.min(e.barr.max, e.barr.hp+50); }
   if(fresh){
@@ -1066,7 +1069,7 @@ function spawnZombie(){
   else {x=WW-8;y=Math.max(20,Math.min(WH-20,cyr+jit()));}
   const hp=CFG.Z_HP+day*CFG.Z_HP_DAY+night_t*CFG.Z_HP_TIME;
   zombies.push({x,y,r:15,hp,maxhp:hp,speed:(CFG.Z_SPD+Math.random()*12+day*CFG.Z_SPD_DAY)*(ev555?1.3:1),
-    entry:best,inside:false,climb:0,hitCd:0,bob:Math.random()*6});
+    entry:best,inside:false,climb:0,hitCd:0,bob:Math.random()*6,stun:0,slow:0});
 }
 // ===== v3: 변종 '러닝크루(러너)' — 창문 직행, 낮은 HP, 빠름 =====
 function spawnRunner(){
@@ -1077,7 +1080,7 @@ function spawnRunner(){
   if(!best){ bd=1e9; for(const en of ENTRIES){const d=Math.hypot(en.cx-x,en.cy-y); if(d<bd){bd=d;best=en;}} }
   const hp=(CFG.Z_HP+day*CFG.Z_HP_DAY+night_t*CFG.Z_HP_TIME)*0.6;
   zombies.push({x,y,r:13,hp,maxhp:hp,speed:(ev555?110*1.3:110),kind:'runner',climbNeed:0.9,
-    entry:best,inside:false,climb:0,hitCd:0,bob:Math.random()*6});
+    entry:best,inside:false,climb:0,hitCd:0,bob:Math.random()*6,stun:0,slow:0});
 }
 // 파문: 소음 발생 → 링 확산(300px/s), 닿은 좀비가 발원지로 (31번 §4)
 function addRipple(x,y,max,score){ ripples.push({x,y,r:0,max}); noiseScore+=score; }
@@ -1206,7 +1209,10 @@ function update(dt){
   // attack
   player.cdLeft-=dt;
   if(player.cdLeft<=0){let hit=false,nd=1e9,ndir=0;
-    for(const z of zombies){const d=Math.hypot(z.x-player.x,z.y-player.y);if(d<player.atkR+z.r&&losClear(player.x,player.y,z.x,z.y)){z.hp-=Math.round(((player.eDmg||player.dmg)+(player.skillDmg||0))*moraleAtk());hit=true;const a=Math.atan2(z.y-player.y,z.x-player.x);z.x+=Math.cos(a)*10;z.y+=Math.sin(a)*10;if(d<nd){nd=d;ndir=a;}}}
+    for(const z of zombies){const d=Math.hypot(z.x-player.x,z.y-player.y);if(d<player.atkR+z.r&&losClear(player.x,player.y,z.x,z.y)){
+      if(has('s_b3')&&z.hp<=z.maxhp*0.3){ z.hp=0; fx.push({type:'float',x:z.x,y:z.y-20,txt:'처형',col:'#FF9EB5',t:0.7}); }
+      else z.hp-=Math.round(((player.eDmg||player.dmg)+(player.skillDmg||0))*moraleAtk());
+      if(has('s_b2')&&Math.random()<0.15){ z.stun=2; fx.push({type:'float',x:z.x,y:z.y-24,txt:'기절!',col:'#FFC24B',t:0.8}); }hit=true;const a=Math.atan2(z.y-player.y,z.x-player.x);z.x+=Math.cos(a)*10;z.y+=Math.sin(a)*10;if(d<nd){nd=d;ndir=a;}}}
     if(hit){player.cdLeft=player.atkCd;player.swingT=0.22;player.swingDir=ndir;player.lungeT=0.15;freeze=0.03;}else player.cdLeft=0.08;}
   // repair
   player.repairing=null;
@@ -1216,6 +1222,7 @@ function update(dt){
   // 치료 (서연=간호사): 반경 내 부상 동료 체력 회복 (다운 회복 가속은 동료 루프에서)
   player.healing=false;
   for(const a of allies){ if(a.down>0)continue;
+    if(has('s_a2')&&Math.hypot(a.x-player.x,a.y-player.y)<(player.healR||CFG.HEAL_R)) a.adrenaline=0.3;
     if(a.hp<a.maxhp && Math.hypot(a.x-player.x,a.y-player.y)<(player.healR||CFG.HEAL_R)){
       a.hp=Math.min(a.maxhp,a.hp+(CFG.HEAL_RATE+(player.healBonus||0))*(blackout?0.5:1)*dt); player.healing=true;
       if(a.healFx===undefined||a.healFx<=0){a.healFx=0.6;fx.push({type:'float',x:a.x,y:a.y-26,txt:'+치료',col:'#7ED8A8',t:0.8});}
@@ -1225,6 +1232,43 @@ function update(dt){
   } // else(중상 아님)
   } // end 1F player block
 
+  // ===== v4: T2·T3 동작 스킬 =====
+  {
+    const jh=allies.find(a=>a.key==='jaehyuk'&&a.down<=0&&(!a.work||a.work==='combat'));
+    const sc=allies.find(a=>a.key==='sangcheol'&&a.down<=0&&(!a.work||a.work==='combat'));
+    const ms=allies.find(a=>a.key==='mansu'&&a.down<=0&&(!a.work||a.work==='combat'));
+    if(jh&&has('h_a2')){ sprayCd-=dt;
+      if(sprayCd<=0){ let n=0;
+        for(const z of zombies){ if(n>=3)continue;
+          const d=Math.hypot(z.x-jh.x,z.y-jh.y);
+          if(d<130){ const ang=Math.atan2(z.y-jh.y,z.x-jh.x);
+            z.x+=Math.cos(ang)*70; z.y+=Math.sin(ang)*70; z.slow=3; n++;
+            if(has('h_a3')){ for(const z2 of zombies){ if(z2!==z&&Math.hypot(z2.x-z.x,z2.y-z.y)<40){
+              z2.hp-=14; z.hp-=14; fx.push({type:'float',x:z.x,y:z.y-20,txt:'충돌!',col:'#FF9EB5',t:0.7}); } } } } }
+        if(n){ sprayCd=8; fx.push({type:'float',x:jh.x,y:jh.y-30,txt:'소화 분사!',col:'#7FE3F0',t:1}); } } }
+    if(sc&&has('c_a2')&&typeof sc.post==='number'){
+      for(const z of zombies){ if(Math.hypot(z.x-sc.x,z.y-sc.y)<200) z.taunt=sc; } }
+    if(sc&&has('c_b2')){ chargeCd-=dt;
+      if(chargeCd<=0){ let tg=null,td=1e9;
+        for(const z of zombies){ const d=Math.hypot(z.x-sc.x,z.y-sc.y); if(d<220&&d<td){td=d;tg=z;} }
+        if(tg){ const ang=Math.atan2(tg.y-sc.y,tg.x-sc.x); let n=0;
+          for(const z of zombies){ const d=Math.hypot(z.x-sc.x,z.y-sc.y);
+            if(d>200)continue;
+            const a2=Math.atan2(z.y-sc.y,z.x-sc.x);
+            if(Math.abs(((a2-ang+Math.PI*3)%(Math.PI*2))-Math.PI)<0.35){
+              z.x+=Math.cos(ang)*90; z.y+=Math.sin(ang)*90; z.hp-=18; z.slow=2; n++; } }
+          if(n){ chargeCd=10; sc.x+=Math.cos(ang)*40; sc.y+=Math.sin(ang)*40; collideW(sc); shake=4;
+            fx.push({type:'float',x:sc.x,y:sc.y-30,txt:'돌진!',col:'#FFC24B',t:1}); } } } }
+    if(ms&&has('m_b2')&&typeof ms.post==='number'&&ENTRIES[ms.post]){
+      if(!turret) turret={x:ENTRIES[ms.post].inP.x,y:ENTRIES[ms.post].inP.y,cd:0};
+      turret.cd-=dt;
+      if(turret.cd<=0){ let tg=null,td=1e9;
+        for(const z of zombies){ const d=Math.hypot(z.x-turret.x,z.y-turret.y);
+          if(d<150&&d<td&&losClear(turret.x,turret.y,z.x,z.y)){td=d;tg=z;} }
+        if(tg){ tg.hp-=8; turret.cd=0.7; addRipple(turret.x,turret.y,50,1);
+          fx.push({type:'shot',x1:turret.x,y1:turret.y,x2:tg.x,y2:tg.y,t:0.1}); } } }
+    else if(!has('m_b2')) turret=null;
+  }
   // ---- allies ----
   // 능동 요격: 거점 반경 ENGAGE 안 좀비를 상대. STRAY 이상 벗어나면 복귀(거점 너무 안 떠나게)
   const moveTo=(a,tx,ty,near)=>{const d=Math.hypot(tx-a.x,ty-a.y);if(d>near){a.moving=true;a.phase+=dt*10;a.x+=(tx-a.x)/d*a.spd*dt;a.y+=(ty-a.y)/d*a.spd*dt;}return d;};
@@ -1234,6 +1278,11 @@ function update(dt){
     if(a.work&&a.work!=='combat')continue; // 시설근무/휴식 = 밤에 야전 미참여
     if(a.down>0){ // 중상 → 시간 지나면 다시 일어남. 서연 곁이면 훨씬 빨리 + 더 많은 체력으로
       const nearS=!player.away&&Math.hypot(a.x-player.x,a.y-player.y)<CFG.HEAL_R;
+      if(has('s_a3')&&reviveLeft>0&&nearS&&Math.hypot(a.x-player.x,a.y-player.y)<52){
+        a.reviveT=(a.reviveT||0)+dt;
+        if(a.reviveT>=1.5){ a.down=0; a.hp=a.maxhp; a.reviveT=0; reviveLeft--;   // v4: 3초→1.5초 (기존 자력 기상보다 빨라야 의미)
+          fx.push({type:'alert',txt:'소생술! '+a.nm+' 일어섰다 (남은 '+reviveLeft+'회)',t:2.2}); continue; } }
+      else a.reviveT=0;
       a.down-=dt*(nearS?1+CFG.REVIVE_BOOST:1);
       if(a.down<=0){a.hp=Math.round(a.maxhp*(nearS?CFG.REVIVE_HP_NEAR:0.5));}
       continue; }
@@ -1276,7 +1325,14 @@ function update(dt){
       collideW(a); continue;
     }
     // 전투: 거점 배치면 거점 반경 안 좀비 능동 요격. 거점에 가장 가까운(=제일 위협적인) 좀비 우선.
-    const RNG=(a.eRng||a.rng)+(a.skillRng||0), DMG=Math.round(((a.eDmg||a.dmg)+(a.skillDmg||0))*moraleAtk()), CDv=(a.eCd||a.cd)*(a.skillCd||1)*moraleCd();
+    let RNG=(a.eRng||a.rng)+(a.skillRng||0);
+    let DMG=Math.round(((a.eDmg||a.dmg)+(a.skillDmg||0))*moraleAtk());
+    let CDv=(a.eCd||a.cd)*(a.skillCd||1)*moraleCd();
+    if(a.adrenaline>0){ a.adrenaline-=dt; CDv*=0.8; }
+    if(a.key==='jaehyuk'&&has('h_b3')){
+      const nearDown=allies.some(o=>o!==a&&o.down>0&&Math.hypot(o.x-a.x,o.y-a.y)<120);
+      a.guardBuff=nearDown?1:0; if(nearDown)DMG=Math.round(DMG*1.4); }
+    if(a.key==='mansu'&&has('m_b3')) a.cctv=1;
     const ENGAGE = a.eRanged ? Math.max(240, RNG+20) : 210;  // 요격 반경(원거리는 넓게)
     const STRAY  = a.eRanged ? 70 : 175;                      // 거점서 이만큼 넘게 벗어나면 복귀(자리 지킴)
     let tg=null,td=1e9;
@@ -1287,7 +1343,24 @@ function update(dt){
       const needMove=td>RNG+tg.r, tooFar=post&&Math.hypot(a.x-post.cx,a.y-post.cy)>STRAY;
       if(needMove&&tooFar){ if(hold)goHold(a,post,hold.x,hold.y,20); }   // 너무 멀어졌으면 복귀 우선
       else if(needMove){ moveTo(a,tg.x,tg.y,RNG+tg.r); }              // 나가서 접근
-      else if(a.cdLeft<=0&&losClear(a.x,a.y,tg.x,tg.y)){a.cdLeft=CDv;tg.hp-=DMG;a.swingT=0.2;a.swingDir=Math.atan2(tg.y-a.y,tg.x-a.x);
+      else if(a.cdLeft<=0&&losClear(a.x,a.y,tg.x,tg.y)){a.cdLeft=CDv;
+        let dmg=DMG;
+        if(a.key==='jina'&&has('j_a3')){ jinaShots++; if(jinaShots%4===0){ dmg*=3;
+          fx.push({type:'float',x:tg.x,y:tg.y-26,txt:'헤드샷!',col:'#FFC24B',t:0.9}); } }
+        if(a.key==='jaehyuk'&&has('h_b2')&&!tg.hitByJH){ dmg=Math.round(dmg*1.5); tg.hitByJH=1; }
+        if(a.cctv&&!tg.cctvHit){ dmg=Math.round(dmg*1.25); tg.cctvHit=1; }
+        tg.hp-=dmg; a.swingT=0.2; a.swingDir=Math.atan2(tg.y-a.y,tg.x-a.x);
+        if(a.key==='jina'&&has('j_b3')) tg.slow=2;
+        if(a.key==='jina'&&has('j_a2')){
+          const ang=Math.atan2(tg.y-a.y,tg.x-a.x); let pierced=0;
+          for(const z2 of zombies){ if(z2===tg||pierced>=1)continue;
+            if(Math.hypot(z2.x-a.x,z2.y-a.y)>RNG+40)continue;
+            const a2=Math.atan2(z2.y-a.y,z2.x-a.x);
+            if(Math.abs(((a2-ang+Math.PI*3)%(Math.PI*2))-Math.PI)<0.18){ z2.hp-=Math.round(dmg*0.8); pierced++; } } }
+        if(a.key==='jina'&&has('j_b2')&&tg.hp<=0){
+          for(const z2 of zombies){ if(z2===tg)continue;
+            if(Math.hypot(z2.x-tg.x,z2.y-tg.y)<90){ z2.hp-=Math.round(dmg*0.5);
+              fx.push({type:'shot',x1:tg.x,y1:tg.y,x2:z2.x,y2:z2.y,t:0.12}); break; } } }
         if(a.eRanged){fx.push({type:'shot',x1:a.x,y1:a.y-10,x2:tg.x,y2:tg.y,t:0.1});addRipple(a.x,a.y,60,1);}}
     } else if(hold){ goHold(a,post,hold.x,hold.y,20); } // 위협 없으면 거점 복귀
     collideW(a);
@@ -1300,7 +1373,10 @@ function update(dt){
     let T=null, td=1e9; if(!player.away){T={x:player.x,y:player.y};td=Math.hypot(player.x-z.x,player.y-z.y);}
     for(const a of allies){if(a.down>0)continue;const d=Math.hypot(a.x-z.x,a.y-z.y);if(d<td){td=d;T={x:a.x,y:a.y};}}
     if(!T){T={x:CENTER.x,y:CENTER.y};}
-    if(z.lureT>0){ z.lureT-=dt; T={x:z.lure.x,y:z.lure.y}; }   // v3: 파문에 홀린 상태
+    if(z.taunt&&z.taunt.down<=0){ T={x:z.taunt.x,y:z.taunt.y}; }  // v4: 상철 도발
+    if(z.lureT>0){ z.lureT-=dt; T={x:z.lure.x,y:z.lure.y}; }   // 파문에 홀린 상태
+    if(z.stun>0){ z.stun-=dt; continue; }                      // v4: 기절
+    const _sp=z.speed; if(z.slow>0){ z.slow-=dt; z.speed*=0.7; } // v4: 둔화
     if(z.inside){
       stepToward(z, T.x, T.y, dt, false);   // 안에 들어왔으면 사람 추격
     } else {
@@ -1315,18 +1391,33 @@ function update(dt){
       if(en.barr.hp>0){
         if(dDoor>z.r+6){stepFlow(z, en, dt, true);}
         else {const was=en.barr.hp;en.barr.hp-=(CFG.GNAW+day*CFG.GNAW_DAY)*dt;   // 문 앞 도착 → 부수는 중
-          if(was>0&&en.barr.hp<=0){en.barr.hp=0;shake=6;fx.push({type:'alert',txt:en.name+' 뚫림!',t:1.4,bad:true});}}
+          if(has('m_a2')){ const ms2=allies.find(a=>a.key==='mansu');
+            if(ms2&&typeof ms2.post==='number'&&ENTRIES[ms2.post]===en) z.hp-=12*dt; }
+          if(was>0&&en.barr.hp<=0){
+            const ms3=allies.find(a=>a.key==='mansu');
+            if(has('m_a3')&&!en.shutterUsed&&ms3&&typeof ms3.post==='number'&&ENTRIES[ms3.post]===en){
+              en.shutterUsed=true; en.barr.hp=Math.round(en.barr.max*0.5);
+              fx.push({type:'alert',txt:'이중 셔터 전개! '+en.name+' 복구',t:2.4});
+            } else { en.barr.hp=0;shake=6;fx.push({type:'alert',txt:en.name+' 뚫림!',t:1.4,bad:true}); } }}
       } else {
         if(dDoor>z.r+6){stepFlow(z, en, dt, false);}
         else if(en.isWin && z.climb<(z.climbNeed||CFG.WINDOW_CLIMB)){ z.climb+=dt; }
         else { z.x=en.inP.x; z.y=en.inP.y; z.inside=true; }
       }
     }
+    z.speed=_sp;
     // 플레이어 타격
     const pd=player.away?1e9:Math.hypot(z.x-player.x,z.y-player.y);
     if(pd<z.r+player.r&&z.hitCd<=0){z.hitCd=0.8;if(player.hurtCd<=0){player.hp-=(13+day*1.5);player.hurtCd=0.35;player.painT=0.5;const ka=Math.atan2(player.y-z.y,player.x-z.x);player.x+=Math.cos(ka)*14;player.y+=Math.sin(ka)*14;collide(player);shake=5;}}
     // 동료 타격
-    for(const a of allies){if(a.down>0||a.post==='roof'||(a.work&&a.work!=='combat'))continue;const ad=Math.hypot(z.x-a.x,z.y-a.y);if(ad<z.r+a.r&&z.hitCd<=0){z.hitCd=0.8;a.hp-=(11+day*1.2);
+    for(const a of allies){if(a.down>0||a.post==='roof'||(a.work&&a.work!=='combat'))continue;const ad=Math.hypot(z.x-a.x,z.y-a.y);if(ad<z.r+a.r&&z.hitCd<=0){z.hitCd=0.8;
+      let dmgTake=(11+day*1.2);
+      if(a.key==='jaehyuk'&&a.guardBuff) dmgTake*=0.7;
+      a.hp-=dmgTake;
+      if(a.key==='sangcheol'&&has('c_a3')&&!survivedOnce&&a.hp<=0){
+        survivedOnce=true; a.hp=1; a.invT=3;
+        fx.push({type:'alert',txt:'상철 버티기! 3초 무적',t:2.4}); }
+      if(a.invT>0){ a.invT-=dt; a.hp=Math.max(a.hp,1); }
       if(a.hp<=0){a.hp=0;
         if(a.mortal){ // v4: 합류 생존자는 영구 사망 → 추모벽
           memorial.push({key:a.key,nm:a.nm,memo:a.memo,from:a.joinDay,to:day});
@@ -1374,6 +1465,9 @@ function update(dt){
   if(night_t>=CFG.NIGHT_SEC)return morning();
 }
 function morning(){
+  if(has('c_b3')){ const bonus=Math.round(kills*0.3);
+    for(let i=0;i<bonus;i++) gainXp();
+    if(bonus)moraleFx.push({txt:'재고 정리 XP +'+bonus,col:'#7ED8A8',t:2.2}); }
   // v4: SP 획득 — 생존 +1, 30킬↑ +1
   let gain=1+(kills>=30?1:0); sp+=gain;
   moraleFx.push({txt:'SP +'+gain,col:'#C08BFF',t:2.4});
@@ -1774,6 +1868,11 @@ function render(){
   // 서연 치료 오라(치료 중일 때 초록 반경 링)
   if(player.healing){cx.save();cx.strokeStyle='rgba(126,216,168,'+(0.35+0.2*Math.sin(night_t*8))+')';cx.lineWidth=2;cx.beginPath();cx.arc(player.x,player.y,CFG.HEAL_R,0,6.29);cx.stroke();
     cx.fillStyle='rgba(126,216,168,0.06)';cx.fill();cx.restore();}
+  if(turret){ cx.save(); cx.fillStyle='#5a6b80'; cx.fillRect(turret.x-11,turret.y-11,22,22);
+    cx.strokeStyle='#C08BFF'; cx.lineWidth=2.5; cx.strokeRect(turret.x-11,turret.y-11,22,22);
+    cx.fillStyle='#C08BFF'; cx.beginPath(); cx.arc(turret.x,turret.y,5,0,6.29); cx.fill();
+    cx.font='700 9px sans-serif'; cx.textAlign='center';
+    cx.fillText('터렛',turret.x,turret.y-16); cx.restore(); }
   for(const rp of ripples){cx.strokeStyle='rgba(255,194,75,'+(0.5*(1-rp.r/rp.max))+')';cx.lineWidth=2;cx.beginPath();cx.arc(rp.x,rp.y,rp.r,0,6.29);cx.stroke();}
   // 서연
   const img=SPR[player.face]||SPR.front;

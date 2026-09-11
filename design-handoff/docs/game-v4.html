@@ -342,6 +342,13 @@ let journalView=null, journalIdx=0;
 let knock=null, knockDone=false;   // {entry, t, opened, openT}
 // ===== v4: T2·T3 스킬 런타임 =====
 let turret=null, reviveLeft=0, survivedOnce=false, sprayCd=0, chargeCd=0, jinaShots=0;
+// ===== v4: 호드 =====
+function isHorde(d){ return d%7===0; }
+// ===== v4: E10 탈출 =====
+let deepOpen=false, escape=null, endAnimT=0, endPage=0;
+function aliveKey(k){ return allies.some(a=>a.key===k) || k==='seoyeon'; }
+function escapeReady(){ return escape&&escape.truck&&escape.fuel&&escape.route; }
+function hordeIn(){ const n=7-(day%7); return n===7?0:n; }   // 0 = 오늘이 호드
 // ===== v4: 실내 전투(하이브리드 원정) =====
 const IN_W=760, IN_H=1080;   // 소형 실내 맵
 let indoor=null;             // {node, walls, boxes, zeds, witch, loot, timeLeft}
@@ -581,10 +588,10 @@ const BFURN=[
 // 상호작용 지점
 const BVAULT={x:1010,y:1130,r:34};        // 금고문(빨간불) — 기계실 우하단 코너
 
-function reset(){ day=1; totalKills=0; food=20; materials=8; fac={barricade:0,farm:0}; ownedItems=[]; selMember=null; totalRescued=0; joined=[]; memorial=[]; rescueCard=null; pendingRescue=[]; escortees=[]; memorialView=null; morale=70; blackout=false; prevBlackout=false; moraleFx=[]; indoor=null; journalView=null; sp=0; skills={}; journals=0; keyLevel=1; skillSel='seoyeon'; scene='1F'; startNight(true); }
+function reset(){ day=1; totalKills=0; food=20; materials=8; fac={barricade:0,farm:0}; ownedItems=[]; selMember=null; totalRescued=0; joined=[]; memorial=[]; rescueCard=null; pendingRescue=[]; escortees=[]; memorialView=null; morale=70; blackout=false; prevBlackout=false; moraleFx=[]; indoor=null; journalView=null; sp=0; skills={}; journals=0; keyLevel=1; skillSel='seoyeon'; deepOpen=false; escape=null; endAnimT=0; endPage=0; scene='1F'; startNight(true); }
 function startNight(fresh){
   night_t=0; kills=0; zombies=[]; gems=[]; fx=[]; spawnAcc=0;
-  ripples=[]; knock=null; knockDone=false;
+  ripples=[]; knock=null; knockDone=false; variantAcc=0; hordeQueue=[];
   turret=null; reviveLeft=has('s_a3')?2:0; survivedOnce=false; sprayCd=8; chargeCd=10; jinaShots=0; ev333=ev444=ev555=false; noiseFxT=0; laststand=false; lsT=0; lsDone=false;
   noisePrev=fresh?0:noiseScore; noiseScore=0; if(player)player.downT=0;
   for(const e of ENTRIES){ e.barr.max=CFG.BARR_MAX+fac.barricade*20; e.barr.hp = fresh?e.barr.max:Math.min(e.barr.max, e.barr.hp+50); }
@@ -610,6 +617,12 @@ function startNight(fresh){
   }
   applySkills();
   if(has('m_b1'))materials+=1;   // 손재주
+  if(escape&&escape.night) fx.push({type:'alert',txt:'실행의 밤 — 셔터를 연다',t:3.0});
+  else if(isHorde(day)) fx.push({type:'alert',txt:'호드 — 물량 2.5배',t:2.6,bad:true});
+  if(isHorde(day)&&!blackout){   // v4: 호드 — 이삿짐 1~3 고정
+    const n=1+Math.floor(day/14);
+    for(let i=0;i<Math.min(3,n);i++) hordeQueue.push(30+i*40);
+  }
   // 요새 콤보: 만수 배치 거점 바리케이드 강화(+40)
   const m=allies.find(a=>a.key==='mansu');
   if(m&&m.work==='combat'&&typeof m.post==='number'&&ENTRIES[m.post]){ const e=ENTRIES[m.post]; e.barr.max+=40; e.barr.hp=e.barr.max; }
@@ -635,14 +648,14 @@ cv.addEventListener('touchstart',e=>{const t=e.changedTouches[0];
   if(state==='indoor'){ const rc=cv.getBoundingClientRect();
     const mx=(t.clientX-rc.left)*(VW/rc.width), my=(t.clientY-rc.top)*(VH/rc.height);
     if(indoorTap(mx,my)){e.preventDefault();return;} }
-  if(state==='assign'||state==='morning'||state==='expedition'){const rc=cv.getBoundingClientRect();const mx=(t.clientX-rc.left)*(VW/rc.width),my=(t.clientY-rc.top)*(VH/rc.height);if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else if(state==='skill')skillTap(mx,my);else if(state==='journal')journalTap(mx,my);else expeditionTap(mx,my);e.preventDefault();return;}
+  if(state==='assign'||state==='morning'||state==='expedition'||state==='deepest'||state==='ending'){const rc=cv.getBoundingClientRect();const mx=(t.clientX-rc.left)*(VW/rc.width),my=(t.clientY-rc.top)*(VH/rc.height);if(state==='deepest')deepestTap(mx,my);else if(state==='ending')endingTap();else if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else if(state==='skill')skillTap(mx,my);else if(state==='journal')journalTap(mx,my);else expeditionTap(mx,my);e.preventDefault();return;}
   joy={id:t.identifier,sx:t.clientX,sy:t.clientY,dx:0,dy:0};e.preventDefault();},{passive:false});
 cv.addEventListener('click',e=>{
   if(state==='play'&&knock){ const rcK=cv.getBoundingClientRect();
     if(knockTap((e.clientX-rcK.left)*(VW/rcK.width),(e.clientY-rcK.top)*(VH/rcK.height))) return; }
   if(state==='indoor'){ const rc0=cv.getBoundingClientRect();
     indoorTap((e.clientX-rc0.left)*(VW/rc0.width),(e.clientY-rc0.top)*(VH/rc0.height)); return; }
-  if(state!=='assign'&&state!=='morning'&&state!=='expedition'&&state!=='memorial'&&state!=='skill'&&state!=='journal')return; const rc=cv.getBoundingClientRect();const mx=(e.clientX-rc.left)*(VW/rc.width),my=(e.clientY-rc.top)*(VH/rc.height);if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else if(state==='skill')skillTap(mx,my);else if(state==='journal')journalTap(mx,my);else expeditionTap(mx,my); });
+  if(state!=='assign'&&state!=='morning'&&state!=='expedition'&&state!=='memorial'&&state!=='skill'&&state!=='journal'&&state!=='deepest'&&state!=='ending')return; const rc=cv.getBoundingClientRect();const mx=(e.clientX-rc.left)*(VW/rc.width),my=(e.clientY-rc.top)*(VH/rc.height);if(state==='deepest')deepestTap(mx,my);else if(state==='ending')endingTap();else if(state==='assign')assignTap(mx,my);else if(state==='morning')morningTap(mx,my);else if(state==='memorial')memorialTap(mx,my);else if(state==='skill')skillTap(mx,my);else if(state==='journal')journalTap(mx,my);else expeditionTap(mx,my); });
 cv.addEventListener('touchmove',e=>{if(!joy)return;for(const t of e.changedTouches)if(t.identifier===joy.id){joy.dx=t.clientX-joy.sx;joy.dy=t.clientY-joy.sy;}e.preventDefault();},{passive:false});
 const endT=e=>{if(joy)for(const t of e.changedTouches)if(t.identifier===joy.id)joy=null;};
 cv.addEventListener('touchend',endT);cv.addEventListener('touchcancel',endT);
@@ -745,7 +758,8 @@ function morningLayout(){
   const itemY=facY+54, cw=(w-4*6)/5;
   const chips=ITEMS.map((it,i)=>({it,x:x+i*(cw+6),y:itemY,w:cw,h:46}));
   const lightY=itemY+60;
-  return {rows,fac2,chips,next:{x,y:VH-72,w,h:60},itemY,skillBtn:{x:VW-124,y:70,w:112,h:38},
+  const eq=escape?[{k:'truck',x,y:lightY+66,w:w/3-6,h:46},{k:'fuel',x:x+w/3+3,y:lightY+66,w:w/3-6,h:46},{k:'route',x:x+2*w/3+6,y:lightY+66,w:w/3-6,h:46}]:[];
+  return {rows,fac2,chips,eq,next:{x,y:VH-72,w,h:60},itemY,skillBtn:{x:VW-124,y:70,w:112,h:38},
     light:{on:{x,y:lightY,w:w/2-4,h:58}, off:{x:x+w/2+4,y:lightY,w:w/2-4,h:58}}};
 }
 function drawMorning(){
@@ -779,9 +793,29 @@ function drawMorning(){
     cx.fillStyle='#5a6b80';cx.font='9px "Apple SD Gothic Neo",sans-serif';
     cx.fillText(tier==='high'?'전 능력 +5%':tier==='low'?'공속·수리 −10%':tier==='crit'?'붕괴 — 이탈 위험':'',gx+gw+8,gy+8);
   }
-  cx.textAlign='left';cx.fillStyle='#8CA0B3';cx.font='11px "Apple SD Gothic Neo",sans-serif';
-  cx.fillText('생존자 탭=아이템 선택 · 근무(전투/시설/휴식) · 시설/아이템 강화 후 다음 밤',12,82);
+  // v4: 호드 예고
+  { const n=hordeIn();
+    cx.textAlign='left'; cx.font='800 11px "Apple SD Gothic Neo",sans-serif';
+    if(n===0){ cx.fillStyle='#FF5A5A'; cx.fillText('⚠ 오늘 밤 호드 — 물량 2.5배 · 이삿짐 등장',12,82); }
+    else if(n===1){ cx.fillStyle='#FFC24B'; cx.fillText('⚠ 내일 밤 호드 — 오늘 바리케이드를 올려라',12,82); }
+    else { cx.fillStyle='#8CA0B3'; cx.fillText('호드까지 '+n+'일 · 생존자 탭=아이템 · 근무(전투/시설/휴식)',12,82); } }
   const L=morningLayout();
+  // v4: 탈출 준비 패널
+  if(escape){ const rdy=escapeReady();
+    cx.textAlign='left'; cx.fillStyle=rdy?'#FFC24B':'#C9B27A'; cx.font='800 11px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText(rdy?'🚚 탈출 준비 완료 — 오늘 밤 떠난다':'🚚 탈출 준비',12,L.eq[0].y-6);
+    for(const e of L.eq){ const q=ESCQ[e.k], done=escape[e.k];
+      const can=!done&&e.k!=='fuel'&&(!q.who||q.who.some(aliveKey))&&materials>=q.cost;
+      cx.fillStyle=done?'rgba(126,216,168,0.18)':can?'rgba(255,194,75,0.14)':'rgba(18,26,43,0.85)';
+      cx.strokeStyle=done?'#7ED8A8':can?'#FFC24B':'#243247'; cx.lineWidth=done||can?2:1;
+      cx.fillRect(e.x,e.y,e.w,e.h); cx.strokeRect(e.x,e.y,e.w,e.h);
+      cx.textAlign='center'; cx.fillStyle=done?'#7ED8A8':can?'#FFC24B':'#5a6b80';
+      cx.font='800 13px "Apple SD Gothic Neo",sans-serif';
+      cx.fillText((done?'✔ ':'')+q.nm,e.x+e.w/2,e.y+20);
+      cx.font='9px "Apple SD Gothic Neo",sans-serif'; cx.fillStyle=done?'#5a7a68':'#5a6b80';
+      cx.fillText(done?'완료':q.hint,e.x+e.w/2,e.y+36);
+    }
+  }
   const WKN=['전투','시설','휴식'];
   for(const r of L.rows){ const m=r.m, isSel=selMember===m.who;
     cx.fillStyle=isSel?'rgba(127,227,240,0.14)':'rgba(18,26,43,0.85)';cx.strokeStyle=isSel?'#7FE3F0':'#243247';cx.lineWidth=isSel?2:1;
@@ -835,8 +869,10 @@ function drawMorning(){
     cx.font='10px "Apple SD Gothic Neo",sans-serif';cx.fillText('웨이브 −70% · 사기'+(prevBlackout?'−20':'−10'),LB.off.x+LB.off.w/2,LB.off.y+43);
   }
   // 다음 밤
-  cx.fillStyle='#FFC24B';cx.fillRect(L.next.x,L.next.y,L.next.w,L.next.h);
-  cx.fillStyle='#1a1206';cx.font='900 16px "Apple SD Gothic Neo",sans-serif';cx.textAlign='center';cx.font='900 20px "Apple SD Gothic Neo",sans-serif';cx.fillText('☀️ 낮 원정 출발',VW/2,L.next.y+L.next.h/2+7);
+  const goEsc=escapeReady();
+  cx.fillStyle=goEsc?'#7ED8A8':'#FFC24B';cx.fillRect(L.next.x,L.next.y,L.next.w,L.next.h);
+  cx.fillStyle=goEsc?'#06231a':'#1a1206';cx.font='900 16px "Apple SD Gothic Neo",sans-serif';cx.textAlign='center';cx.font='900 20px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText(goEsc?'🚚 오늘 밤 떠난다 — 실행의 밤':'☀️ 낮 원정 출발',VW/2,L.next.y+L.next.h/2+7);
 }
 // ===== v4: 점장의 일지 화면 =====
 function jrnBtn(){ return {x:VW/2-100,y:VH-84,w:200,h:56}; }
@@ -880,7 +916,7 @@ function drawJournal(){
 }
 function journalTap(lx,ly){
   const B=jrnBtn();
-  if(lx>B.x&&lx<B.x+B.w&&ly>B.y&&ly<B.y+B.h){ journalView=null; state='morning'; }
+  if(lx>B.x&&lx<B.x+B.w&&ly>B.y&&ly<B.y+B.h){ journalView=null; state=(journals>=12&&keyLevel>=4&&!deepOpen)?(deepOpen=true,'deepest'):'morning'; }
 }
 // ===== v4: 스킬 트리 화면 =====
 function skillLayout(){
@@ -1018,6 +1054,7 @@ function endExpedition(){
     totalRescued++;
   }
   if(escortees.length){ fx.push({type:'alert',txt:escortees.map(e=>e.nm).join('·')+' 합류!',t:2.6}); addMorale(5*escortees.length,'사기'); sp+=escortees.length; }
+  if(escape&&!escape.fuel){ escape.fuel=true; fx.push({type:'alert',txt:'연료 확보 — 탈출 준비 1/3',t:2.4}); }
   escortees=[]; rescueCard=null;
   startNight(false); state='play';
 }
@@ -1078,7 +1115,9 @@ function expeditionTap(lx,ly){
 }
 function morningTap(lx,ly){
   const L=morningLayout();
-  const N=L.next; if(lx>N.x&&lx<N.x+N.w&&ly>N.y&&ly<N.y+N.h){ genExpedition(); state='expedition'; return; }
+  const N=L.next; if(lx>N.x&&lx<N.x+N.w&&ly>N.y&&ly<N.y+N.h){
+    if(escapeReady()){ escape.night=true; document.getElementById('morning').classList.add('hidden'); startNight(false); state='play'; return; }
+    genExpedition(); state='expedition'; return; }
   for(const r of L.rows){
     for(const b of r.work){ if(lx>b.x&&lx<b.x+b.w&&ly>b.y&&ly<b.y+b.h){ r.m.who.work=['combat','facility','rest'][b.k]; recomputeCombos(); return; } }
     if(lx>r.sel.x&&lx<r.sel.x+r.sel.w&&ly>r.sel.y&&ly<r.sel.y+r.sel.h){ selMember=(selMember===r.m.who)?null:r.m.who; return; }
@@ -1090,9 +1129,25 @@ function morningTap(lx,ly){
     if(lx>LB.off.x&&lx<LB.off.x+LB.off.w&&ly>LB.off.y&&ly<LB.off.y+LB.off.h){ blackout=true; return; } }
   for(const f of L.fac2){ if(lx>f.x&&lx<f.x+f.w&&ly>f.y&&ly<f.y+f.h){ const lv=fac[f.k],cost=(lv+1)*(f.k==='barricade'?4:3); if(materials>=cost){materials-=cost;fac[f.k]++;} return; } }
   for(const c of L.chips){ if(lx>c.x&&lx<c.x+c.w&&ly>c.y&&ly<c.y+c.h){ if(selMember)equipItem(morningMembers().find(m=>m.who===selMember),c.it.id); return; } }
+  for(const e of L.eq){ if(lx>e.x&&lx<e.x+e.w&&ly>e.y&&ly<e.y+e.h){ escTap(e.k); return; } }
+}
+// v4: 탈출 준비 3과제
+const ESCQ={
+  truck:{nm:'트럭 정비',cost:15,who:['mansu','sangcheol'],hint:'자재 15 · 만수/상철 필요'},
+  fuel :{nm:'연료 확보',cost:0, who:null,            hint:'원정 1회 완수로 획득'},
+  route:{nm:'루트 확보',cost:5, who:['mika','sangcheol'],hint:'자재 5 · 미카/상철 필요'}
+};
+function escTap(k){
+  if(!escape||escape[k])return;
+  const q=ESCQ[k];
+  if(k==='fuel')return;                                  // 원정에서만
+  if(q.who&&!q.who.some(aliveKey))return;                // 담당자 생존 필요
+  if(materials<q.cost)return;
+  materials-=q.cost; escape[k]=true; addMorale(5,'탈출 준비');
+  moraleFx.push({txt:q.nm+' 완료',col:'#FFC24B',t:2.2});
 }
 
-let spawnRR=0;
+let spawnRR=0, variantAcc=0, hordeQueue=[];
 function spawnZombie(){
   // v4 수정: 거점을 라운드로빈으로 균등 배정 → 좌상단 편중 해소
   const best=ENTRIES[spawnRR++%ENTRIES.length];
@@ -1120,6 +1175,24 @@ function spawnRunner(){
   const hp=(CFG.Z_HP+day*CFG.Z_HP_DAY+night_t*CFG.Z_HP_TIME)*0.6;
   zombies.push({x,y,r:13,hp,maxhp:hp,speed:(ev555?110*1.3:110),kind:'runner',climbNeed:0.9,
     entry:best,inside:false,climb:0,hitCd:0,bob:Math.random()*6,stun:0,slow:0});
+}
+// v4: 이삿짐(브루트) — HP 4배, 느림, 갉기 5배, 넉백 면역
+function spawnBrute(){
+  const en=ENTRIES[Math.floor(Math.random()*ENTRIES.length)];
+  const m=Math.min(WW-20,Math.max(20,en.cx+(Math.random()*200-100)));
+  const y=(en.cy<WH/2)?8:WH-8;
+  const hp=(CFG.Z_HP+day*CFG.Z_HP_DAY+night_t*CFG.Z_HP_TIME)*4;
+  zombies.push({x:m,y,r:22,hp,maxhp:hp,speed:24,kind:'brute',gnawMul:5,noKb:true,
+    entry:en,inside:false,climb:0,hitCd:0,bob:Math.random()*6,stun:0,slow:0});
+}
+// v4: 배달통(부머) — 사망 시 국물 폭발(주변 좀비 가속)
+function spawnBoomer(){
+  const en=ENTRIES[Math.floor(Math.random()*ENTRIES.length)];
+  const m=Math.min(WW-20,Math.max(20,en.cx+(Math.random()*200-100)));
+  const y=(en.cy<WH/2)?8:WH-8;
+  const hp=(CFG.Z_HP+day*CFG.Z_HP_DAY+night_t*CFG.Z_HP_TIME)*0.8;
+  zombies.push({x:m,y,r:18,hp,maxhp:hp,speed:CFG.Z_SPD+day*CFG.Z_SPD_DAY,kind:'boomer',
+    entry:en,inside:false,climb:0,hitCd:0,bob:Math.random()*6,stun:0,slow:0});
 }
 // 파문: 소음 발생 → 링 확산(300px/s), 닿은 좀비가 발원지로 (31번 §4)
 function addRipple(x,y,max,score){ ripples.push({x,y,r:0,max}); noiseScore+=score; }
@@ -1187,6 +1260,13 @@ function update(dt){
   if(!ev444&&night_t>=242){ev444=true;noiseFxT=1.5;shake=6;fx.push({type:'alert',txt:'4:44 — 무언가 온다',t:2.2,bad:true});const n=2+Math.min(3,Math.floor(day/2));for(let i=0;i<n;i++)spawnRunner();}
   if(!ev555&&night_t>=408){ev555=true;fx.push({type:'alert',txt:'5:55 — 최종 러시!',t:2.2,bad:true});for(const z of zombies)z.speed*=1.3;}
   if(noiseFxT>0)noiseFxT-=dt;
+  // ===== v4: 변종 주기 스폰 =====
+  for(let i=hordeQueue.length-1;i>=0;i--){ if(night_t>=hordeQueue[i]){ hordeQueue.splice(i,1); spawnBrute(); } }
+  variantAcc+=dt;
+  if(variantAcc>6){ variantAcc=0;
+    if(day>=4&&Math.random()<0.35) spawnBoomer();
+    if(day>=5&&Math.random()<0.25) spawnBrute();
+  }
   // ===== v4: 문 두드림 — D+5 이후, 밤당 1회, 확률 25% =====
   if(!knock&&!knockDone&&!blackout&&day>=5&&night_t>90&&night_t<300&&Math.random()<0.0015){
     const alive=ENTRIES.filter(e=>e.barr.hp>0);
@@ -1224,6 +1304,7 @@ function update(dt){
   if(ev333&&night_t<107)interval*=0.5;                                          // 3:33 러시 30초
   if(ev555)interval=CFG.SPAWN_MIN;                                              // 최종 러시
   if(blackout)interval/=0.3;                                                    // v4: 소등의 밤 — 웨이브 70% 감소
+  if(isHorde(day))interval/=2.5;                                                // v4: 호드 밤 — 물량 2.5배
   spawnAcc+=dt; while(spawnAcc>interval){spawnAcc-=interval;spawnZombie();}
 
   if(player.ladCd>0)player.ladCd-=dt;
@@ -1281,7 +1362,7 @@ function update(dt){
         for(const z of zombies){ if(n>=3)continue;
           const d=Math.hypot(z.x-jh.x,z.y-jh.y);
           if(d<130){ const ang=Math.atan2(z.y-jh.y,z.x-jh.x);
-            z.x+=Math.cos(ang)*70; z.y+=Math.sin(ang)*70; z.slow=3; n++;
+            if(!z.noKb){ z.x+=Math.cos(ang)*70; z.y+=Math.sin(ang)*70; } z.slow=3; n++;
             if(has('h_a3')){ for(const z2 of zombies){ if(z2!==z&&Math.hypot(z2.x-z.x,z2.y-z.y)<40){
               z2.hp-=14; z.hp-=14; fx.push({type:'float',x:z.x,y:z.y-20,txt:'충돌!',col:'#FF9EB5',t:0.7}); } } } } }
         if(n){ sprayCd=8; fx.push({type:'float',x:jh.x,y:jh.y-30,txt:'소화 분사!',col:'#7FE3F0',t:1}); } } }
@@ -1295,7 +1376,7 @@ function update(dt){
             if(d>200)continue;
             const a2=Math.atan2(z.y-sc.y,z.x-sc.x);
             if(Math.abs(((a2-ang+Math.PI*3)%(Math.PI*2))-Math.PI)<0.35){
-              z.x+=Math.cos(ang)*90; z.y+=Math.sin(ang)*90; z.hp-=18; z.slow=2; n++; } }
+              if(!z.noKb){ z.x+=Math.cos(ang)*90; z.y+=Math.sin(ang)*90; } z.hp-=18; z.slow=2; n++; } }
           if(n){ chargeCd=10; sc.x+=Math.cos(ang)*40; sc.y+=Math.sin(ang)*40; collideW(sc); shake=4;
             fx.push({type:'float',x:sc.x,y:sc.y-30,txt:'돌진!',col:'#FFC24B',t:1}); } } } }
     if(ms&&has('m_b2')&&typeof ms.post==='number'&&ENTRIES[ms.post]){
@@ -1415,7 +1496,7 @@ function update(dt){
     if(z.taunt&&z.taunt.down<=0){ T={x:z.taunt.x,y:z.taunt.y}; }  // v4: 상철 도발
     if(z.lureT>0){ z.lureT-=dt; T={x:z.lure.x,y:z.lure.y}; }   // 파문에 홀린 상태
     if(z.stun>0){ z.stun-=dt; continue; }                      // v4: 기절
-    const _sp=z.speed; if(z.slow>0){ z.slow-=dt; z.speed*=0.7; } // v4: 둔화
+    const _sp=z.speed; if(z.slow>0){ z.slow-=dt; z.speed*=0.7; } if(z.boost>0){ z.boost-=dt; z.speed*=1.3; } // v4: 둔화·가속
     if(z.inside){
       stepToward(z, T.x, T.y, dt, false);   // 안에 들어왔으면 사람 추격
     } else {
@@ -1429,7 +1510,7 @@ function update(dt){
       const dDoor=Math.hypot(z.x-cxp,z.y-cyp);
       if(en.barr.hp>0){
         if(dDoor>z.r+6){stepFlow(z, en, dt, true);}
-        else {const was=en.barr.hp;en.barr.hp-=(CFG.GNAW+day*CFG.GNAW_DAY)*dt;   // 문 앞 도착 → 부수는 중
+        else {const was=en.barr.hp;en.barr.hp-=(CFG.GNAW+day*CFG.GNAW_DAY)*(z.gnawMul||1)*dt;   // 문 앞 도착 → 부수는 중
           if(has('m_a2')){ const ms2=allies.find(a=>a.key==='mansu');
             if(ms2&&typeof ms2.post==='number'&&ENTRIES[ms2.post]===en) z.hp-=12*dt; }
           if(was>0&&en.barr.hp<=0){
@@ -1465,6 +1546,9 @@ function update(dt){
           recomputeCombos(); continue;
         } else a.down=10; }}}
     if(z.hp<=0){kills++;totalKills++;fx.push({type:'pop',x:z.x,y:z.y,t:0.3});
+      if(z.kind==='boomer'){   // v4: 국물 폭발 — 주변 좀비 8초 가속
+        for(const z2 of zombies){ if(z2!==z&&Math.hypot(z2.x-z.x,z2.y-z.y)<60){ z2.boost=8; } }
+        fx.push({type:'float',x:z.x,y:z.y-24,txt:'국물 폭발!',col:'#FFC24B',t:1.2}); shake=4; }
       const rr=Math.random();
       const foodRate = has('c_b1')?0.16:0.10;
       const kind = rr<foodRate?'food' : rr<foodRate+0.08?'medkit' : 'xp';   // 좀비 드랍
@@ -1504,6 +1588,7 @@ function update(dt){
   if(night_t>=CFG.NIGHT_SEC)return morning();
 }
 function morning(){
+  if(escape&&escape.night){ endPage=0; endAnimT=0; state='ending'; return; }   // v4: E10 탈출 엔딩
   if(has('c_b3')){ const bonus=Math.round(kills*0.3);
     for(let i=0;i<bonus;i++) gainXp();
     if(bonus)moraleFx.push({txt:'재고 정리 XP +'+bonus,col:'#7ED8A8',t:2.2}); }
@@ -1559,6 +1644,130 @@ function drawMemorial(){
 function memorialTap(lx,ly){
   if(lx>VW/2-105&&lx<VW/2+105&&ly>VH-80&&ly<VH-24){ if(memorialView&&!memorialView.seen){memorialView.seen=true;addMorale(5,'추모');} memorialView=null; state=journalView?'journal':'morning'; }
 }
+// ===== v4: E10 최심부 개방 화면 =====
+function deepestLayout(){ return {stay:{x:24,y:VH-86,w:(VW-60)/2,h:62}, go:{x:VW-24-(VW-60)/2,y:VH-86,w:(VW-60)/2,h:62}}; }
+function drawDeepest(){
+  cx.fillStyle='#070B12'; cx.fillRect(0,0,VW,VH);
+  // 전국 지점 지도 — 램프 점멸
+  cx.strokeStyle='rgba(127,227,240,0.18)'; cx.lineWidth=1;
+  cx.strokeRect(40,96,VW-80,VH-250);
+  const lamps=[[0.32,0.18],[0.55,0.31],[0.44,0.52],[0.68,0.63],[0.28,0.74],[0.75,0.42],[0.50,0.86]];
+  for(let i=0;i<lamps.length;i++){
+    const lx2=40+lamps[i][0]*(VW-80), ly2=96+lamps[i][1]*(VH-250);
+    const pulse=0.45+0.55*Math.abs(Math.sin(endAnimT*1.6+i));
+    cx.fillStyle='rgba(255,194,75,'+pulse.toFixed(2)+')';
+    cx.beginPath(); cx.arc(lx2,ly2,4,0,6.29); cx.fill();
+    cx.strokeStyle='rgba(255,194,75,'+(pulse*0.3).toFixed(2)+')'; cx.lineWidth=1;
+    cx.beginPath(); cx.arc(lx2,ly2,10+pulse*7,0,6.29); cx.stroke();
+  }
+  cx.textAlign='center';
+  cx.fillStyle='#FFC24B'; cx.font='900 21px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('벙커 최심부 — 개방',VW/2,56);
+  cx.fillStyle='#8CA0B3'; cx.font='12px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('무기도 금도 아니었다. 전국 안심24 지점 지도 · 본사 비상 프로토콜 · 일지 12장(음성)',VW/2,78);
+  cx.fillStyle='#7FE3F0'; cx.font='800 16px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('서연: "…등대가, 우리만이 아니었어."',VW/2,VH-160);
+  cx.fillStyle='#C9B27A'; cx.font='12px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('"지켜라. 사람을 받아라. 밥을 나눠라. 그러다 때가 되면 — 떠나라."  — 강대식',VW/2,VH-134);
+  const L=deepestLayout();
+  cx.fillStyle='rgba(30,41,61,0.95)'; cx.strokeStyle='#3a4658'; cx.lineWidth=2;
+  cx.fillRect(L.stay.x,L.stay.y,L.stay.w,L.stay.h); cx.strokeRect(L.stay.x,L.stay.y,L.stay.w,L.stay.h);
+  cx.fillStyle='#E8EFF7'; cx.font='900 17px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('남는다',L.stay.x+L.stay.w/2,L.stay.y+30);
+  cx.fillStyle='#8CA0B3'; cx.font='10px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('무한 생존 계속 · 지도는 벙커에 걸린다',L.stay.x+L.stay.w/2,L.stay.y+48);
+  cx.fillStyle='rgba(255,194,75,0.2)'; cx.strokeStyle='#FFC24B';
+  cx.fillRect(L.go.x,L.go.y,L.go.w,L.go.h); cx.strokeRect(L.go.x,L.go.y,L.go.w,L.go.h);
+  cx.fillStyle='#FFC24B'; cx.font='900 17px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('떠난다',L.go.x+L.go.w/2,L.go.y+30);
+  cx.fillStyle='#C9B27A'; cx.font='10px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText('탈출 준비 개시 — 트럭·연료·루트',L.go.x+L.go.w/2,L.go.y+48);
+}
+function deepestTap(lx,ly){
+  const L=deepestLayout();
+  if(lx>L.stay.x&&lx<L.stay.x+L.stay.w&&ly>L.stay.y&&ly<L.stay.y+L.stay.h){ state='morning'; return; }
+  if(lx>L.go.x&&lx<L.go.x+L.go.w&&ly>L.go.y&&ly<L.go.y+L.go.h){
+    escape={truck:false,fuel:false,route:false,night:false}; addMorale(10,'희망'); state='morning'; return; }
+}
+// ===== v4: E10 롤콜 엔딩 =====
+function drawEnding(){
+  cx.fillStyle='#05080E'; cx.fillRect(0,0,VW,VH);
+  // 새벽 도로 — 흘러가는 차선
+  cx.strokeStyle='rgba(127,180,255,0.18)'; cx.lineWidth=3;
+  for(let i=0;i<7;i++){ const yy=((endAnimT*160+i*90)%(VH+90))-45;
+    cx.beginPath(); cx.moveTo(VW/2-3,yy); cx.lineTo(VW/2-3,yy+42); cx.stroke(); }
+  cx.textAlign='center';
+  if(endPage===0){   // 추모 폴라로이드 롤콜
+    cx.fillStyle='#C9B27A'; cx.font='700 12px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText('두고 온 얼굴들',VW/2,54);
+    const list=memorial;
+    if(!list.length){ cx.fillStyle='#7ED8A8'; cx.font='900 18px "Apple SD Gothic Neo",sans-serif';
+      cx.fillText('아무도 두고 오지 않았다.',VW/2,VH/2); }
+    for(let i=0;i<list.length;i++){
+      const ph=(endAnimT-i*1.1);
+      if(ph<0||ph>2.2) continue;
+      const a=ph<0.3?ph/0.3:(ph>1.8?(2.2-ph)/0.4:1);
+      const py=VH*0.62-ph*40;
+      cx.save(); cx.globalAlpha=Math.max(0,Math.min(1,a));
+      cx.translate(VW/2,py); cx.rotate((i%2?1:-1)*0.05);
+      cx.fillStyle='#F5EFE0'; cx.fillRect(-52,-64,104,128);
+      cx.fillStyle='#2A3346'; cx.fillRect(-44,-56,88,84);
+      cx.fillStyle='#3a4658'; cx.font='900 15px "Apple SD Gothic Neo",sans-serif';
+      cx.fillText(list[i].nm,0,48);
+      cx.fillStyle='#7a6a52'; cx.font='9px "Apple SD Gothic Neo",sans-serif';
+      cx.fillText('D+'+list[i].from+'~D+'+list[i].to+' · '+(list[i].to-list[i].from+1)+'일',0,60);
+      cx.restore();
+      cx.fillStyle='rgba(232,239,247,'+Math.max(0,Math.min(1,a)).toFixed(2)+')';
+      cx.font='12px "Apple SD Gothic Neo",sans-serif';
+      cx.fillText('"'+list[i].memo+'"',VW/2,py+92);
+    }
+  } else if(endPage===1){   // 탑승자 명단
+    cx.fillStyle='#7ED8A8'; cx.font='900 17px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText('탑승자 명단',VW/2,64);
+    const crew=['서연'].concat(allies.map(a=>a.nm));
+    for(let i=0;i<crew.length;i++){
+      const a=Math.max(0,Math.min(1,(endAnimT-i*0.22)/0.4));
+      cx.fillStyle='rgba(232,239,247,'+a.toFixed(2)+')';
+      cx.font='800 15px "Apple SD Gothic Neo",sans-serif';
+      cx.fillText(crew[i],VW/2,100+i*26);
+    }
+  } else if(endPage===2){   // 정산
+    cx.fillStyle='#E8EFF7'; cx.font='900 22px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText('D+'+day+'.',VW/2,VH/2-60);
+    cx.font='900 19px "Apple SD Gothic Neo",sans-serif';
+    cx.fillStyle='#7ED8A8'; cx.fillText('함께 떠난 사람 '+(allies.length+1)+'명.',VW/2,VH/2-16);
+    cx.fillStyle='#C9B27A'; cx.fillText('두고 온 얼굴 '+memorial.length+'장.',VW/2,VH/2+18);
+    cx.fillStyle='#8CA0B3'; cx.font='12px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText('처치 '+totalKills+' · 구출 '+totalRescued+' · 최종 사기 '+Math.round(morale),VW/2,VH/2+56);
+  } else {   // 백미러 — 불은 켜둔 채
+    const gl=0.5+0.5*Math.abs(Math.sin(endAnimT*1.1));
+    cx.save(); cx.translate(VW/2,VH*0.42);
+    cx.fillStyle='rgba(255,194,75,'+(gl*0.14).toFixed(2)+')';
+    cx.beginPath(); cx.arc(0,0,74,0,6.29); cx.fill();
+    cx.fillStyle='#6E2B8E'; cx.fillRect(-40,-16,80,26);
+    cx.fillStyle='#9BDE3C'; cx.fillRect(-40,10,80,5);
+    cx.fillStyle='rgba(255,240,200,'+gl.toFixed(2)+')';
+    cx.font='900 13px "Apple SD Gothic Neo",sans-serif'; cx.fillText('안심24',0,3);
+    cx.restore();
+    cx.fillStyle='#5a6b80'; cx.font='11px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText('백미러 속 안심24. 불은 켜둔 채.',VW/2,VH*0.42+108);
+    const a=Math.max(0,Math.min(1,(endAnimT-1.2)/1.4));
+    cx.fillStyle='rgba(255,194,75,'+a.toFixed(2)+')';
+    cx.font='900 17px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText('"불빛은 사람을 부르고,',VW/2,VH-146);
+    cx.fillText('사람이 모이면 아침이 온다."',VW/2,VH-120);
+    const a2=Math.max(0,Math.min(1,(endAnimT-3.0)/1.2));
+    cx.fillStyle='rgba(127,227,240,'+a2.toFixed(2)+')';
+    cx.font='800 13px "Apple SD Gothic Neo",sans-serif';
+    cx.fillText('다음 등대: 인천공항점',VW/2,VH-80);
+  }
+  cx.fillStyle='#5a6b80'; cx.font='11px "Apple SD Gothic Neo",sans-serif';
+  cx.fillText(endPage>=3?'탭 — 처음으로':'탭 — 계속',VW/2,VH-30);
+}
+function endingTap(){
+  if(endPage>=3){ document.getElementById('over').classList.add('hidden'); reset(); state='assign'; return; }
+  endPage++; endAnimT=0;
+}
 function realMorning(){
   day++;
   // 밤새 정산: 시설근무=생산, 휴식=회복, 인원수만큼 식량 소모
@@ -1573,6 +1782,7 @@ function realMorning(){
   const fresh=memorial.filter(m=>m.to===day-1);
   if(fresh.length){ memorialView=fresh[fresh.length-1]; state='memorial'; }
   else if(journalView){ state='journal'; }
+  else if(journals>=12&&keyLevel>=4&&!deepOpen){ deepOpen=true; state='deepest'; }
   else state='morning';
 }
 function gameOver(t){state='over';document.getElementById('oDday').textContent='D+'+day;document.getElementById('oTitle').textContent=t;document.getElementById('oStats').textContent=day+'일 밤까지 생존 · 처치 '+totalKills+' · 구출 '+totalRescued+' · 떠나보낸 '+memorial.length+'명 · 최종 사기 '+Math.round(morale);document.getElementById('over').classList.remove('hidden');}
@@ -1853,6 +2063,8 @@ function render(){
   if(state==='assign'){ drawAssign(); return; }
   if(state==='morning'){ drawMorning(); return; }
   if(state==='expedition'){ drawExpedition(); return; }
+  if(state==='deepest'){ drawDeepest(); return; }
+  if(state==='ending'){ drawEnding(); return; }
   if(state==='memorial'){ drawMemorial(); return; }
   if(state==='skill'){ drawSkill(); return; }
   if(state==='indoor'){ drawIndoor(); return; }
@@ -2044,8 +2256,8 @@ function drawHUDmini(){
   drawMinimap();
 }
 function loop(ts){if(lastTs===undefined)lastTs=ts;let dt=(ts-lastTs)/1000;lastTs=ts;if(dt>0.05)dt=0.05;
-  if(freeze>0){freeze-=dt;} else if(state==='play')update(dt); else if(state==='indoor')updateIndoor(dt); else if(state==='dawn'){dawnT+=dt;if(dawnT>=3.2)realMorning();}
-  if(state==='play'||state==='levelup'||state==='pause'||state==='dawn'||state==='assign'||state==='morning'||state==='expedition'||state==='memorial'||state==='skill'||state==='indoor'||state==='journal')render();
+  if(freeze>0){freeze-=dt;} else if(state==='play')update(dt); else if(state==='indoor')updateIndoor(dt); else if(state==='dawn'){dawnT+=dt;if(dawnT>=3.2)realMorning();} else if(state==='ending'||state==='deepest'){endAnimT+=dt;}
+  if(state==='play'||state==='levelup'||state==='pause'||state==='dawn'||state==='assign'||state==='morning'||state==='expedition'||state==='memorial'||state==='skill'||state==='indoor'||state==='journal'||state==='deepest'||state==='ending')render();
   requestAnimationFrame(loop);}
 document.getElementById('btnStart').onclick=()=>{document.getElementById('title').classList.add('hidden');reset();state='play';};
 document.getElementById('btnNext').onclick=()=>{document.getElementById('morning').classList.add('hidden');startNight(false);state='play';};
@@ -2055,5 +2267,4 @@ document.getElementById('btnPause').onclick=togglePause; // 화면 ⏸ 버튼(�
 document.getElementById('btnAssign').onclick=openAssign; // 거점 방어 배치
 document.getElementById('btnDbg').onclick=()=>{showDbg=!showDbg;};
 requestAnimationFrame(loop);
-
 </script>

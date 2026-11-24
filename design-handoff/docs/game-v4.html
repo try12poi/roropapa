@@ -43,12 +43,19 @@ canvas{display:block;background:#0A0E17;border-radius:6px}
 const CFG={
   NIGHT_SEC:420,           // 하룻밤 420초 = 03:00~06:00
   SPAWN_BASE:1.7,          // v4: 난이도 상향 (2.8→1.7, 물량 65%↑)
-  SPAWN_MIN:0.32,
+  SPAWN_MIN:1.4,           // v4: 평시 하한 1.4초 ≈ 초당 0.71마리 (처치 능력 0.95/s보다 낮게 → 안 쌓인다)
+  SPAWN_MIN_HORDE:0.56,    // v4: 호드 하한 0.56초 ≈ 초당 1.79마리 (평시의 2.5배)
   SPAWN_RAMP:0.006,
   SPAWN_DAY:0.12,
   Z_HP:48, Z_HP_DAY:12, Z_HP_TIME:0.06,
   Z_SPD:28, Z_SPD_DAY:1.4,
   GNAW:3.4, GNAW_DAY:0.5,                 // 바리케이드 갉는 속도
+  Z_CAP:200,               // v4: 동시 좀비 상한 — 폰 프레임 보호 (없으면 1400체까지 쌓였다)
+  HORDE_GNAW:1.6,          // v4: 호드 밤 갉기 배율 (물량 대신 질)
+  HORDE_HP:1.3,            // v4: 호드 밤 좀비 HP 배율
+  HORDE_BRUTE:4,           // v4: 호드 밤 이삿짐 기본 투입 수 (D+14마다 +1, 최대 6)
+  SWARM_N:3,               // v4: 이 수 이상에 둘러싸이면 무적시간 단축
+  HURT_CD:0.35, HURT_CD_SWARM:0.25,
   WINDOW_CLIMB:1.8,        // 창문 넘는 시간(초)
   BARR_MAX:85,
   P_HP:100, P_DMG:30, P_CD:0.72, P_R:48, P_SPD:105, P_REPAIR:8,
@@ -344,6 +351,7 @@ let knock=null, knockDone=false;   // {entry, t, opened, openT}
 let turret=null, reviveLeft=0, survivedOnce=false, sprayCd=0, chargeCd=0, jinaShots=0;
 // ===== v4: 호드 =====
 function isHorde(d){ return d%7===0; }
+function hordeHp(){ return isHorde(day)?CFG.HORDE_HP:1; }   // v4: 호드 밤 좀비 HP 배율
 // ===== v4: E10 탈출 =====
 let deepOpen=false, escape=null, endAnimT=0, endPage=0;
 // ===== v4: 테스트 점프 패널 (?test=1 전용 — 평소 플레이엔 미노출) =====
@@ -681,8 +689,8 @@ function startNight(fresh){
   if(escape&&escape.night) fx.push({type:'alert',txt:'실행의 밤 — 셔터를 연다',t:3.0});
   else if(isHorde(day)) fx.push({type:'alert',txt:'호드 — 물량 2.5배',t:2.6,bad:true});
   if(isHorde(day)&&!blackout){   // v4: 호드 — 이삿짐 1~3 고정
-    const n=1+Math.floor(day/14);
-    for(let i=0;i<Math.min(3,n);i++) hordeQueue.push(30+i*40);
+    const n=Math.min(6,CFG.HORDE_BRUTE+Math.floor(day/14));
+    for(let i=0;i<n;i++) hordeQueue.push(30+i*30);
   }
   // 요새 콤보: 만수 배치 거점 바리케이드 강화(+40)
   const m=allies.find(a=>a.key==='mansu');
@@ -1222,12 +1230,13 @@ function spawnZombie(){
   else if(m===dBot){x=Math.max(20,Math.min(WW-20,cxr+jit()));y=WH-8;}
   else if(m===dLeft){x=8;y=Math.max(20,Math.min(WH-20,cyr+jit()));}
   else {x=WW-8;y=Math.max(20,Math.min(WH-20,cyr+jit()));}
-  const hp=CFG.Z_HP+day*CFG.Z_HP_DAY+night_t*CFG.Z_HP_TIME;
+  const hp=(CFG.Z_HP+day*CFG.Z_HP_DAY+night_t*CFG.Z_HP_TIME)*hordeHp();
   zombies.push({x,y,r:15,hp,maxhp:hp,speed:(CFG.Z_SPD+Math.random()*12+day*CFG.Z_SPD_DAY)*(ev555?1.3:1),
     entry:best,inside:false,climb:0,hitCd:0,bob:Math.random()*6,stun:0,slow:0});
 }
 // ===== v3: 변종 '러닝크루(러너)' — 창문 직행, 낮은 HP, 빠름 =====
 function spawnRunner(){
+  if(zombies.length>=CFG.Z_CAP) return;
   const e=Math.floor(Math.random()*3); let x,y;
   if(e===0){x=Math.random()*WW;y=8;} else if(e===1){x=8;y=Math.random()*WH;} else {x=Math.random()*WW;y=WH-8;}
   let best=null,bd=1e9;
@@ -1239,19 +1248,21 @@ function spawnRunner(){
 }
 // v4: 이삿짐(브루트) — HP 4배, 느림, 갉기 5배, 넉백 면역
 function spawnBrute(){
+  if(zombies.length>=CFG.Z_CAP) return;
   const en=ENTRIES[Math.floor(Math.random()*ENTRIES.length)];
   const m=Math.min(WW-20,Math.max(20,en.cx+(Math.random()*200-100)));
   const y=(en.cy<WH/2)?8:WH-8;
-  const hp=(CFG.Z_HP+day*CFG.Z_HP_DAY+night_t*CFG.Z_HP_TIME)*4;
+  const hp=(CFG.Z_HP+day*CFG.Z_HP_DAY+night_t*CFG.Z_HP_TIME)*4*hordeHp();
   zombies.push({x:m,y,r:22,hp,maxhp:hp,speed:24,kind:'brute',gnawMul:5,noKb:true,
     entry:en,inside:false,climb:0,hitCd:0,bob:Math.random()*6,stun:0,slow:0});
 }
 // v4: 배달통(부머) — 사망 시 국물 폭발(주변 좀비 가속)
 function spawnBoomer(){
+  if(zombies.length>=CFG.Z_CAP) return;
   const en=ENTRIES[Math.floor(Math.random()*ENTRIES.length)];
   const m=Math.min(WW-20,Math.max(20,en.cx+(Math.random()*200-100)));
   const y=(en.cy<WH/2)?8:WH-8;
-  const hp=(CFG.Z_HP+day*CFG.Z_HP_DAY+night_t*CFG.Z_HP_TIME)*0.8;
+  const hp=(CFG.Z_HP+day*CFG.Z_HP_DAY+night_t*CFG.Z_HP_TIME)*0.8*hordeHp();
   zombies.push({x:m,y,r:18,hp,maxhp:hp,speed:CFG.Z_SPD+day*CFG.Z_SPD_DAY,kind:'boomer',
     entry:en,inside:false,climb:0,hitCd:0,bob:Math.random()*6,stun:0,slow:0});
 }
@@ -1322,11 +1333,13 @@ function update(dt){
   if(!ev555&&night_t>=408){ev555=true;fx.push({type:'alert',txt:'5:55 — 최종 러시!',t:2.2,bad:true});for(const z of zombies)z.speed*=1.3;}
   if(noiseFxT>0)noiseFxT-=dt;
   // ===== v4: 변종 주기 스폰 =====
-  for(let i=hordeQueue.length-1;i>=0;i--){ if(night_t>=hordeQueue[i]){ hordeQueue.splice(i,1); spawnBrute(); } }
+  for(let i=hordeQueue.length-1;i>=0;i--){ if(night_t>=hordeQueue[i]){
+    if(zombies.length>=CFG.Z_CAP) continue;          // 꽉 찼으면 다음 프레임에 재시도(투입 수 보장)
+    hordeQueue.splice(i,1); spawnBrute(); } }
   variantAcc+=dt;
   if(variantAcc>6){ variantAcc=0;
-    if(day>=4&&Math.random()<0.35) spawnBoomer();
-    if(day>=5&&Math.random()<0.25) spawnBrute();
+    if(day>=4&&Math.random()<0.25) spawnBoomer();   // 배달통만 주기 스폰
+    // 이삿짐은 호드 밤 고정 투입(hordeQueue)으로만 등장 — 31번 §2.3
   }
   // ===== v4: 문 두드림 — D+5 이후, 밤당 1회, 확률 25% =====
   if(!knock&&!knockDone&&!blackout&&day>=5&&night_t>90&&night_t<300&&Math.random()<0.0015){
@@ -1360,13 +1373,21 @@ function update(dt){
       knock=null; knockDone=true;
     }
   }
-  let interval=Math.max(CFG.SPAWN_MIN, CFG.SPAWN_BASE-night_t*CFG.SPAWN_RAMP-(day-1)*CFG.SPAWN_DAY);
+  // v4 수정: 하한을 평시/호드로 분리. 예전엔 하한을 먼저 걸고 뒤에서 2.5로 나눠
+  //          하한이 무력화돼 초당 7.8마리가 쏟아지고 동시 1400체까지 쌓였다.
+  const floorI=isHorde(day)?CFG.SPAWN_MIN_HORDE:CFG.SPAWN_MIN;
+  let raw=CFG.SPAWN_BASE-night_t*CFG.SPAWN_RAMP-(day-1)*CFG.SPAWN_DAY;
+  if(isHorde(day))raw/=2.5;                                                     // v4: 호드 — 물량 2.5배
+  let interval=Math.max(floorI, raw);
   const nb=Math.min(0.30,Math.floor(noisePrev/10)*0.01); interval/=(1+nb);      // 전날 소음 → 오늘 스폰 가속
   if(ev333&&night_t<107)interval*=0.5;                                          // 3:33 러시 30초
-  if(ev555)interval=CFG.SPAWN_MIN;                                              // 최종 러시
+  if(ev555)interval=floorI;                                                     // 최종 러시
   if(blackout)interval/=0.3;                                                    // v4: 소등의 밤 — 웨이브 70% 감소
-  if(isHorde(day))interval/=2.5;                                                // v4: 호드 밤 — 물량 2.5배
-  spawnAcc+=dt; while(spawnAcc>interval){spawnAcc-=interval;spawnZombie();}
+  interval=Math.max(floorI*0.5,interval);                                       // 이벤트 중첩에도 바닥은 지킨다
+  spawnAcc+=dt;
+  while(spawnAcc>interval){ spawnAcc-=interval;
+    if(zombies.length>=CFG.Z_CAP){ spawnAcc=0; break; }   // v4: 상한 도달 → 적립도 버린다(나중에 몰려나오지 않게)
+    spawnZombie(); }
 
   if(player.ladCd>0)player.ladCd-=dt;
   // ---- 씬별 플레이어 조작 ----
@@ -1571,7 +1592,7 @@ function update(dt){
       const dDoor=Math.hypot(z.x-cxp,z.y-cyp);
       if(en.barr.hp>0){
         if(dDoor>z.r+6){stepFlow(z, en, dt, true);}
-        else {const was=en.barr.hp;en.barr.hp-=(CFG.GNAW+day*CFG.GNAW_DAY)*(z.gnawMul||1)*dt;   // 문 앞 도착 → 부수는 중
+        else {const was=en.barr.hp;en.barr.hp-=(CFG.GNAW+day*CFG.GNAW_DAY)*(z.gnawMul||1)*(isHorde(day)?CFG.HORDE_GNAW:1)*dt;   // 문 앞 도착 → 부수는 중
           if(has('m_a2')){ const ms2=allies.find(a=>a.key==='mansu');
             if(ms2&&typeof ms2.post==='number'&&ENTRIES[ms2.post]===en) z.hp-=12*dt; }
           if(was>0&&en.barr.hp<=0){
@@ -1589,7 +1610,10 @@ function update(dt){
     z.speed=_sp;
     // 플레이어 타격
     const pd=player.away?1e9:Math.hypot(z.x-player.x,z.y-player.y);
-    if(pd<z.r+player.r&&z.hitCd<=0){z.hitCd=0.8;if(player.hurtCd<=0){player.hp-=(13+day*1.5);player.hurtCd=0.35;player.painT=0.5;const ka=Math.atan2(player.y-z.y,player.x-z.x);player.x+=Math.cos(ka)*14;player.y+=Math.sin(ka)*14;collide(player);shake=5;}}
+    if(pd<z.r+player.r&&z.hitCd<=0){z.hitCd=0.8;if(player.hurtCd<=0){player.hp-=(13+day*1.5);
+      let adj=0; for(const z2 of zombies){ const dd=Math.hypot(z2.x-player.x,z2.y-player.y); if(dd<player.r+z2.r+12)adj++; }
+      player.hurtCd=(adj>=CFG.SWARM_N)?CFG.HURT_CD_SWARM:CFG.HURT_CD;   // v4: 둘러싸이면 피해가 빨리 들어온다
+      player.painT=0.5;const ka=Math.atan2(player.y-z.y,player.x-z.x);player.x+=Math.cos(ka)*14;player.y+=Math.sin(ka)*14;collide(player);shake=5;}}
     // 동료 타격
     for(const a of allies){if(a.down>0||a.post==='roof'||(a.work&&a.work!=='combat'))continue;const ad=Math.hypot(z.x-a.x,z.y-a.y);if(ad<z.r+a.r&&z.hitCd<=0){z.hitCd=0.8;
       let dmgTake=(11+day*1.2);

@@ -15,6 +15,9 @@ const CFG={
   HORDE_GNAW:1.6,          // v4: 호드 밤 갉기 배율 (물량 대신 질)
   HORDE_HP:1.3,            // v4: 호드 밤 좀비 HP 배율
   HORDE_BRUTE:4,           // v4: 호드 밤 이삿짐 기본 투입 수 (D+14마다 +1, 최대 6)
+  LS_BROKEN:3,             // v4: 최후의 저항 트리거 — 붕괴 거점 수 (6개 전부는 구조적으로 불가: 좀비가 뚫린 문만 쓴다)
+  WITCH_DAY:28,            // v4: 우는 놈이 밤 방어에 등장하는 날 (42번 콘텐츠표 — 호드④ 각본)
+  WITCH_SPD:130,           // 폭주 시 속도
   SWARM_N:3,               // v4: 이 수 이상에 둘러싸이면 무적시간 단축
   HURT_CD:0.35, HURT_CD_SWARM:0.25,
   WINDOW_CLIMB:1.8,        // 창문 넘는 시간(초)
@@ -26,10 +29,20 @@ const CFG={
   REVIVE_BOOST:2.8,    // 서연 근처 중상(다운) 회복 가속(총 ~3.8배)
   REVIVE_HP_NEAR:0.75, // 서연 곁에서 일어나면 체력 75%(멀면 50%)
 };
-const SPR={}; ["front","side","back","sangcheol","jaehyuk","jina","mansu"].forEach(k=>{SPR[k]=new Image();});
+const SPR={}; ["front","side","back","sangcheol","jaehyuk","jina","mansu",
+  "gojuyeon","ganghogu","bangsoonim","jopilseong","mika","munjunggap","gwakbunnam","imsunjung"].forEach(k=>{SPR[k]=new Image();});
 SPR.front.src="data:image/png;base64,__F__"; SPR.side.src="data:image/png;base64,__S__"; SPR.back.src="data:image/png;base64,__B__";
 SPR.sangcheol.src="data:image/png;base64,__SC__"; SPR.jaehyuk.src="data:image/png;base64,__JH__";
 SPR.jina.src="data:image/png;base64,__JN__"; SPR.mansu.src="data:image/png;base64,__MS__";
+// v4: 구출 생존자 8인 아트 (이전엔 스프라이트가 없어 밤 렌더가 크래시했다)
+SPR.gojuyeon.src="data:image/png;base64,__GJY__";
+SPR.ganghogu.src="data:image/png;base64,__GHG__";
+SPR.bangsoonim.src="data:image/png;base64,__BSI__";
+SPR.jopilseong.src="data:image/png;base64,__JPS__";
+SPR.mika.src="data:image/png;base64,__MIKA__";
+SPR.munjunggap.src="data:image/png;base64,__MJG__";
+SPR.gwakbunnam.src="data:image/png;base64,__GBN__";
+SPR.imsunjung.src="data:image/png;base64,__ISJ__";
 const BG=new Image(); BG.src="data:image/jpeg;base64,__BG__";
 
 const cv=document.getElementById('cv'), cx=cv.getContext('2d');
@@ -647,6 +660,7 @@ function startNight(fresh){
   }
   applySkills();
   if(has('m_b1'))materials+=1;   // 손재주
+  if(isHorde(day)&&day>=CFG.WITCH_DAY) hordeQueue.push(-1);   // v4: 우는 놈 1체 (음수 = 위처 표식)
   if(escape&&escape.night) fx.push({type:'alert',txt:'실행의 밤 — 셔터를 연다',t:3.0});
   else if(isHorde(day)) fx.push({type:'alert',txt:'호드 — 물량 2.5배',t:2.6,bad:true});
   if(isHorde(day)&&!blackout){   // v4: 호드 — 이삿짐 1~3 고정
@@ -1227,6 +1241,18 @@ function spawnBoomer(){
   zombies.push({x:m,y,r:18,hp,maxhp:hp,speed:CFG.Z_SPD+day*CFG.Z_SPD_DAY,kind:'boomer',
     entry:en,inside:false,climb:0,hitCd:0,bob:Math.random()*6,stun:0,slow:0});
 }
+// v4: 우는 놈 — 평소 무해·정지, 파문에 닿으면 폭주하고 주변 좀비를 전부 끌고 온다 (42번 호드④)
+function spawnWitch(){
+  if(zombies.length>=CFG.Z_CAP) return;
+  if(zombies.some(z=>z.kind==='witch')) return;        // 한 밤에 1체
+  const en=ENTRIES[Math.floor(Math.random()*ENTRIES.length)];
+  const x=Math.min(WW-20,Math.max(20,en.cx+(Math.random()*160-80)));
+  const y=(en.cy<WH/2)?8:WH-8;
+  const hp=(CFG.Z_HP+day*CFG.Z_HP_DAY+night_t*CFG.Z_HP_TIME)*3*hordeHp();
+  zombies.push({x,y,r:20,hp,maxhp:hp,speed:0,kind:'witch',dormant:true,
+    entry:en,inside:false,climb:0,hitCd:0,bob:Math.random()*6,stun:0,slow:0});
+  fx.push({type:'alert',txt:'…우는 소리가 들린다. 조용히.',t:3.0,bad:true});
+}
 // 파문: 소음 발생 → 링 확산(300px/s), 닿은 좀비가 발원지로 (31번 §4)
 function addRipple(x,y,max,score){ ripples.push({x,y,r:0,max}); noiseScore+=score; }
 
@@ -1294,9 +1320,11 @@ function update(dt){
   if(!ev555&&night_t>=408){ev555=true;fx.push({type:'alert',txt:'5:55 — 최종 러시!',t:2.2,bad:true});for(const z of zombies)z.speed*=1.3;}
   if(noiseFxT>0)noiseFxT-=dt;
   // ===== v4: 변종 주기 스폰 =====
-  for(let i=hordeQueue.length-1;i>=0;i--){ if(night_t>=hordeQueue[i]){
-    if(zombies.length>=CFG.Z_CAP) continue;          // 꽉 찼으면 다음 프레임에 재시도(투입 수 보장)
-    hordeQueue.splice(i,1); spawnBrute(); } }
+  for(let i=hordeQueue.length-1;i>=0;i--){ const q=hordeQueue[i];
+    if(q===-1){ if(night_t>=20){ if(zombies.length>=CFG.Z_CAP) continue; hordeQueue.splice(i,1); spawnWitch(); } continue; }
+    if(night_t>=q){
+      if(zombies.length>=CFG.Z_CAP) continue;        // 꽉 찼으면 다음 프레임에 재시도(투입 수 보장)
+      hordeQueue.splice(i,1); spawnBrute(); } }
   variantAcc+=dt;
   if(variantAcc>6){ variantAcc=0;
     if(day>=4&&Math.random()<0.25) spawnBoomer();   // 배달통만 주기 스폰
@@ -1539,6 +1567,7 @@ function update(dt){
     if(z.taunt&&z.taunt.down<=0){ T={x:z.taunt.x,y:z.taunt.y}; }  // v4: 상철 도발
     if(z.lureT>0){ z.lureT-=dt; T={x:z.lure.x,y:z.lure.y}; }   // 파문에 홀린 상태
     if(z.stun>0){ z.stun-=dt; continue; }                      // v4: 기절
+    if(z.kind==='witch'&&z.dormant){ continue; }               // v4: 우는 놈 — 깨기 전엔 무해·부동
     const _sp=z.speed; if(z.slow>0){ z.slow-=dt; z.speed*=0.7; } if(z.boost>0){ z.boost-=dt; z.speed*=1.3; } // v4: 둔화·가속
     if(z.inside){
       stepToward(z, T.x, T.y, dt, false);   // 안에 들어왔으면 사람 추격
@@ -1604,11 +1633,18 @@ function update(dt){
 
   // ===== v3: 파문 링 갱신 =====
   for(let i=ripples.length-1;i>=0;i--){const rp=ripples[i];const pr=rp.r;rp.r+=300*dt;
-    for(const z of zombies){const d=Math.hypot(z.x-rp.x,z.y-rp.y);if(d>pr&&d<=Math.min(rp.r,rp.max)){z.lureT=4;z.lure={x:rp.x,y:rp.y};}}
+    for(const z of zombies){const d=Math.hypot(z.x-rp.x,z.y-rp.y);if(d>pr&&d<=Math.min(rp.r,rp.max)){
+      z.lureT=4;z.lure={x:rp.x,y:rp.y};
+      if(z.kind==='witch'&&z.dormant){                 // v4: 우는 놈 폭주 — 소음 숙련 시험
+        z.dormant=false; z.speed=CFG.WITCH_SPD; z.lureT=0;
+        shake=10; noiseFxT=2.0;
+        fx.push({type:'alert',txt:'우는 놈이 깨어났다 — 전부 몰려온다!',t:3.2,bad:true});
+        for(const z2 of zombies){ if(z2!==z){ z2.lureT=8; z2.lure={x:z.x,y:z.y}; } }
+      }}}
     if(rp.r>=rp.max)ripples.splice(i,1);}
   // ===== v3: 최후의 저항 — 전 거점 붕괴 + 내부 15체 =====
-  if(!laststand&&!lsDone&&ENTRIES.every(e=>e.barr.hp<=0)&&zombies.filter(z=>z.inside).length>=15){
-    laststand=true;lsT=30;shake=8;fx.push({type:'alert',txt:'전 거점 붕괴 — 벙커 앞으로!! 최후의 저항!',t:3,bad:true});}
+  if(!laststand&&!lsDone&&ENTRIES.filter(e=>e.barr.hp<=0).length>=CFG.LS_BROKEN&&zombies.filter(z=>z.inside).length>=15){
+    laststand=true;lsT=30;shake=8;fx.push({type:'alert',txt:'거점이 무너진다 — 벙커 앞으로!! 최후의 저항!',t:3,bad:true});}
   if(laststand){lsT-=dt;
     if(lsT<=0){laststand=false;lsDone=true;fx.push({type:'alert',txt:'버텼다…! 동이 튼다',t:3});night_t=CFG.NIGHT_SEC;}
     else if(player.downT>0){const alive=allies.some(a=>(!a.work||a.work==='combat')&&a.down<=0);
@@ -2161,6 +2197,12 @@ function render(){
     cx.fillStyle='#161D2E';cx.strokeStyle='#2E3A57';cx.lineWidth=2;cx.beginPath();cx.arc(z.x,z.y+bob,z.r,0,6.29);cx.fill();cx.stroke();
     cx.fillStyle='#FF5A5A';cx.beginPath();cx.arc(z.x-4,z.y+bob-2,2.2,0,6.29);cx.fill();cx.beginPath();cx.arc(z.x+4,z.y+bob-2,2,0,6.29);cx.fill();
     if(z.kind==='runner'){cx.fillStyle='#cfd6de';cx.fillRect(z.x-1,z.y+bob+4,10,4);}
+    if(z.kind==='witch'){                                      // v4: 우는 놈
+      cx.strokeStyle=z.dormant?'rgba(127,180,255,0.9)':'rgba(255,90,90,0.95)'; cx.lineWidth=3;
+      cx.beginPath(); cx.arc(z.x,z.y+bob,z.r+5,0,6.29); cx.stroke();
+      cx.fillStyle=z.dormant?'#7FB4FF':'#FF5A5A'; cx.font='700 10px "Apple SD Gothic Neo",sans-serif';
+      cx.textAlign='center'; cx.fillText(z.dormant?'우는 놈 — 조용히':'폭주!',z.x,z.y-z.r-16); }
+    if(z.kind==='brute'){cx.strokeStyle='rgba(201,169,106,0.8)';cx.lineWidth=3;cx.beginPath();cx.arc(z.x,z.y+bob,z.r+3,0,6.29);cx.stroke();}
     cx.restore();
     if(climbing){cx.fillStyle='#7FB0FF';cx.font='9px sans-serif';cx.textAlign='center';cx.fillText('넘는중',z.x,z.y-16);}
     if(z.hp<z.maxhp){cx.fillStyle='#20293D';cx.fillRect(z.x-10,z.y-z.r-10,20,3);cx.fillStyle='#FF5A5A';cx.fillRect(z.x-10,z.y-z.r-10,20*(z.hp/z.maxhp),3);}

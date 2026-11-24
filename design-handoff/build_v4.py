@@ -6,6 +6,11 @@ D = pathlib.Path(__file__).parent / 'docs'
 js   = (D/'gamev4.js').read_text(encoding='utf-8')
 html = (D/'game-v4.html').read_text(encoding='utf-8')
 
+# 0) 파일에서 직접 공급할 스프라이트 (직전 빌드에 없는 신규)
+import base64
+FILES = {f'SPR.{k}': f'assets/sprites/{k}.png' for k in
+         ['gojuyeon','ganghogu','bangsoonim','jopilseong','mika','munjunggap','gwakbunnam','imsunjung']}
+
 # 1) 직전 빌드에서 변수명 → base64 수집
 PAT = re.compile(r'([A-Za-z_][\w.]*)\.src="(data:image/[a-z]+;base64,)([A-Za-z0-9+/=]+)"')
 blobs = {m.group(1): (m.group(2), m.group(3)) for m in PAT.finditer(html)}
@@ -16,6 +21,11 @@ PH = re.compile(r'([A-Za-z_][\w.]*)\.src="(data:image/[a-z]+;base64,)(__[A-Z]+__
 missing = []
 def sub(m):
     name = m.group(1)
+    if name in FILES:                                   # 파일 우선 (신규 스프라이트)
+        f = pathlib.Path(__file__).parent / FILES[name]
+        if not f.exists(): missing.append(f'{name} (파일 없음: {FILES[name]})'); return m.group(0)
+        b64 = base64.b64encode(f.read_bytes()).decode()
+        return f'{name}.src="data:image/png;base64,{b64}"'
     if name not in blobs: missing.append(name); return m.group(0)
     mime, b64 = blobs[name]
     return f'{name}.src="{mime}{b64}"'

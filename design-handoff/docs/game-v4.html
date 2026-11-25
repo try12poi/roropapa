@@ -49,18 +49,23 @@ const CFG={
   SPAWN_DAY:0.12,
   Z_HP:48, Z_HP_DAY:12, Z_HP_TIME:0.06,
   Z_SPD:28, Z_SPD_DAY:1.4,
-  GNAW:3.4, GNAW_DAY:0.5,                 // 바리케이드 갉는 속도
+  GNAW:3.0, GNAW_DAY:0.18,                // v4: 갉는 속도 — 날짜 증가를 완화(0.5면 D+28에 17.4/s라 만렙 문이 2.4초에 녹았다)
+  BARR_LV:60,              // v4: 바리케이드 강화 레벨당 +60 (기존 +20은 Lv0→Lv3 차이가 3초뿐이라 투자 의미가 없었다)
   Z_CAP:200,               // v4: 동시 좀비 상한 — 폰 프레임 보호 (없으면 1400체까지 쌓였다)
   HORDE_GNAW:1.6,          // v4: 호드 밤 갉기 배율 (물량 대신 질)
   HORDE_HP:1.3,            // v4: 호드 밤 좀비 HP 배율
   HORDE_BRUTE:4,           // v4: 호드 밤 이삿짐 기본 투입 수 (D+14마다 +1, 최대 6)
-  LS_BROKEN:3,             // v4: 최후의 저항 트리거 — 붕괴 거점 수 (6개 전부는 구조적으로 불가: 좀비가 뚫린 문만 쓴다)
+  DOOR_BIAS:260,           // 뚫린 문 선호(경로 비용 가산) — 대부분의 좀비
+  DOOR_BIAS_FRESH:40,      // v4: 멀쩡한 문도 노리는 소수 — 거점 6곳이 다 쓰이게
+  FRESH_RATE:0.5,          // v4: 그런 좀비 비율 — 0.5에서 평시 2개/호드 3개로 갈린다
+  LS_BROKEN:3,
+  LS_MIN_T:240,            // v4: 최후의 저항은 밤 후반부에만 — 안 그러면 호드 밤이 2분 만에 끝난다             // v4: 최후의 저항 트리거 — 붕괴 거점 수 (6개 전부는 구조적으로 불가: 좀비가 뚫린 문만 쓴다)
   WITCH_DAY:28,            // v4: 우는 놈이 밤 방어에 등장하는 날 (42번 콘텐츠표 — 호드④ 각본)
   WITCH_SPD:130,           // 폭주 시 속도
   SWARM_N:3,               // v4: 이 수 이상에 둘러싸이면 무적시간 단축
   HURT_CD:0.35, HURT_CD_SWARM:0.25,
   WINDOW_CLIMB:1.8,        // 창문 넘는 시간(초)
-  BARR_MAX:85,
+  BARR_MAX:220,            // v4: 85 → 220. 문이 8~16초에 뚫려 '거점 방어'가 성립하지 않았다
   P_HP:100, P_DMG:30, P_CD:0.72, P_R:48, P_SPD:105, P_REPAIR:8,
   MANSU_REPAIR:14,
   HEAL_R:70,          // 서연 치료 반경
@@ -676,7 +681,7 @@ function startNight(fresh){
   ripples=[]; knock=null; knockDone=false; variantAcc=0; hordeQueue=[];
   turret=null; reviveLeft=has('s_a3')?2:0; survivedOnce=false; sprayCd=8; chargeCd=10; jinaShots=0; ev333=ev444=ev555=false; noiseFxT=0; laststand=false; lsT=0; lsDone=false;
   noisePrev=fresh?0:noiseScore; noiseScore=0; if(player)player.downT=0;
-  for(const e of ENTRIES){ e.barr.max=CFG.BARR_MAX+fac.barricade*20; e.barr.hp = fresh?e.barr.max:Math.min(e.barr.max, e.barr.hp+50); }
+  for(const e of ENTRIES){ e.barr.max=CFG.BARR_MAX+fac.barricade*CFG.BARR_LV; e.barr.hp = fresh?e.barr.max:Math.min(e.barr.max, e.barr.hp+CFG.BARR_LV); }
   if(fresh){
     player={x:CENTER.x,y:CENTER.y+120,r:20,hp:CFG.P_HP,maxhp:CFG.P_HP,speed:CFG.P_SPD,
       face:'front',flip:false,moving:false,phase:0,dmg:CFG.P_DMG,atkCd:CFG.P_CD,atkR:CFG.P_R,cdLeft:0,
@@ -1612,9 +1617,10 @@ function update(dt){
       stepToward(z, T.x, T.y, dt, false);   // 안에 들어왔으면 사람 추격
     } else {
       // 사람에게 가는 최선의 출입구 선택 (이미 뚫린 문 강하게 선호 → 새 바리케이드 안 갉음)
+      if(z.doorBias===undefined) z.doorBias=(Math.random()<CFG.FRESH_RATE?CFG.DOOR_BIAS_FRESH:CFG.DOOR_BIAS);
       let en=null,bc=1e9;
       if(z.kind==='runner'&&z.entry&&z.entry.isWin){ en=z.entry; }
-      else { for(const e of ENTRIES){const c=Math.hypot(z.x-e.cx,z.y-e.cy)+Math.hypot(e.inP.x-T.x,e.inP.y-T.y)+(e.barr.hp>0?260:0);if(c<bc){bc=c;en=e;}} }
+      else { for(const e of ENTRIES){const c=Math.hypot(z.x-e.cx,z.y-e.cy)+Math.hypot(e.inP.x-T.x,e.inP.y-T.y)+(e.barr.hp>0?z.doorBias:0);if(c<bc){bc=c;en=e;}} }
       z.entry=en;
       // 문 사각형까지 거리 — 어느 쪽에서 와도 문에 닿으면 두드림/진입
       const rr=en.rect, cxp=Math.max(rr.x,Math.min(rr.x+rr.w,z.x)), cyp=Math.max(rr.y,Math.min(rr.y+rr.h,z.y));
@@ -1682,7 +1688,7 @@ function update(dt){
       }}}
     if(rp.r>=rp.max)ripples.splice(i,1);}
   // ===== v3: 최후의 저항 — 전 거점 붕괴 + 내부 15체 =====
-  if(!laststand&&!lsDone&&ENTRIES.filter(e=>e.barr.hp<=0).length>=CFG.LS_BROKEN&&zombies.filter(z=>z.inside).length>=15){
+  if(!laststand&&!lsDone&&night_t>=CFG.LS_MIN_T&&ENTRIES.filter(e=>e.barr.hp<=0).length>=CFG.LS_BROKEN&&zombies.filter(z=>z.inside).length>=15){
     laststand=true;lsT=30;shake=8;fx.push({type:'alert',txt:'거점이 무너진다 — 벙커 앞으로!! 최후의 저항!',t:3,bad:true});}
   if(laststand){lsT-=dt;
     if(lsT<=0){laststand=false;lsDone=true;fx.push({type:'alert',txt:'버텼다…! 동이 튼다',t:3});night_t=CFG.NIGHT_SEC;}
